@@ -66,8 +66,18 @@ interface CalendarEvent {
   endIso: string;
   gcalEventId?: string;
   syncStatus: "pending_push" | "synced" | "external";
-  attendanceMarked?: "present" | "absent";
+  attendanceMarked?: "present" | "absent" | "cancelled";
+  studyCompleted?: boolean;
   brainDumpId?: string;
+}
+
+interface RewardPerk {
+  id: string;
+  title: string;
+  description: string;
+  costXp: number;
+  category: "chill" | "academic" | "attendance" | "founder";
+  redeemedCount: number;
 }
 
 interface StudyTopic {
@@ -180,6 +190,73 @@ export default function DysAIDashboard() {
   const [dismissedCheckInIds, setDismissedCheckInIds] = useState<string[]>([]);
   const [checkInToast, setCheckInToast] = useState<string | null>(null);
   const hasLoadedStorage = useRef(false);
+
+  // Execution XP & Rewards System State
+  const [xpPoints, setXpPoints] = useState<number>(180);
+  const [xpHistory, setXpHistory] = useState<
+    Array<{ id: string; label: string; delta: number; time: string }>
+  >([
+    {
+      id: "xp-seed-1",
+      label: "Early Subtask: Finalize onboarding flow polish",
+      delta: 15,
+      time: "Today",
+    },
+    {
+      id: "xp-seed-2",
+      label: "Attended SEN 201 & CSC 203 streak",
+      delta: 165,
+      time: "This week",
+    },
+  ]);
+  const [showRewardsModal, setShowRewardsModal] = useState(false);
+  const [rewards, setRewards] = useState<RewardPerk[]>([
+    {
+      id: "perk-chill-2h",
+      title: "2-Hour Guilt-Free Gaming / Netflix Pass",
+      description:
+        "Unlocks a protected 2-hour evening chill window after hitting your class & study blocks.",
+      costXp: 150,
+      category: "chill",
+      redeemedCount: 0,
+    },
+    {
+      id: "perk-exam-cram",
+      title: "AI High-Yield Exam Cheat Sheet & Quiz Unlock",
+      description:
+        "Unlocks an instant predicted lecturer test & 1-page cram guide for any course.",
+      costXp: 250,
+      category: "academic",
+      redeemedCount: 0,
+    },
+    {
+      id: "perk-shawarma",
+      title: "Takeout / Shawarma Milestone Treat",
+      description:
+        "Reward yourself after completing a full streak of classes, study blocks, and early tasks.",
+      costXp: 400,
+      category: "chill",
+      redeemedCount: 0,
+    },
+    {
+      id: "perk-safe-skip",
+      title: "Safe-Skip Shield Token (80%+ Buffer Courses)",
+      description:
+        "Redeemable on courses with a safe attendance buffer (e.g. SEN 201 or BU COS 209) without hurting your 75% guard.",
+      costXp: 500,
+      category: "attendance",
+      redeemedCount: 0,
+    },
+    {
+      id: "perk-weekend",
+      title: "Founder Mode: Full Weekend Off-Grid Recharge",
+      description:
+        "Unlocks a guilt-free weekend recharge after crushing weekly academic & startup deliverables.",
+      costXp: 900,
+      category: "founder",
+      redeemedCount: 0,
+    },
+  ]);
 
   const [courses, setCourses] = useState<CourseProfile[]>(
     DEFAULT_BABCOCK_COURSES
@@ -421,6 +498,18 @@ export default function DysAIDashboard() {
         "dysai_babcock_handbook_text"
       );
       if (savedHandbook) setCustomHandbookText(savedHandbook);
+
+      const savedXp = window.localStorage.getItem("dysai_xp_points");
+      if (savedXp && !isNaN(Number(savedXp))) {
+        setXpPoints(Number(savedXp));
+      }
+      const savedRewards = window.localStorage.getItem("dysai_rewards");
+      if (savedRewards) {
+        const parsedRewards = JSON.parse(savedRewards);
+        if (Array.isArray(parsedRewards) && parsedRewards.length > 0) {
+          setRewards(parsedRewards);
+        }
+      }
     } catch {
       // Ignore malformed localStorage cache
     }
@@ -460,6 +549,58 @@ export default function DysAIDashboard() {
       customHandbookText
     );
   }, [customHandbookText]);
+
+  useEffect(() => {
+    if (!hasLoadedStorage.current) return;
+    window.localStorage.setItem("dysai_xp_points", String(xpPoints));
+  }, [xpPoints]);
+
+  useEffect(() => {
+    if (!hasLoadedStorage.current) return;
+    window.localStorage.setItem("dysai_rewards", JSON.stringify(rewards));
+  }, [rewards]);
+
+  const awardXp = (delta: number, label: string) => {
+    setXpPoints((prev) => Math.max(0, prev + delta));
+    setXpHistory((prev) => [
+      {
+        id: `xp-${Date.now()}`,
+        label,
+        delta,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+      ...prev.slice(0, 14),
+    ]);
+  };
+
+  const redeemReward = (perk: RewardPerk) => {
+    if (xpPoints < perk.costXp) return;
+    setXpPoints((prev) => prev - perk.costXp);
+    setRewards((prev) =>
+      prev.map((r) =>
+        r.id === perk.id ? { ...r, redeemedCount: r.redeemedCount + 1 } : r
+      )
+    );
+    setXpHistory((prev) => [
+      {
+        id: `xp-redeem-${Date.now()}`,
+        label: `Unlocked Perk: ${perk.title}`,
+        delta: -perk.costXp,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+      ...prev.slice(0, 14),
+    ]);
+    setCheckInToast(
+      `Unlocked "${perk.title}" (-${perk.costXp} XP)! Enjoy your reward.`
+    );
+    setTimeout(() => setCheckInToast(null), 4500);
+  };
 
   const toggleTheme = () => {
     const next = theme === "paper" ? "obsidian" : "paper";
@@ -620,11 +761,39 @@ export default function DysAIDashboard() {
       if (createdTasks.length > 0) {
         setExpandedTaskId(createdTasks[0].id);
       }
-      setEvents((prev) =>
-        [...prev, ...createdEvents].sort(
+
+      // If Gemini detected cancelled classes in the Brain Dump (e.g. "COS 201 cancelled today"),
+      // mark matching classes as cancelled without changing totalClassesHeld!
+      const cancelledCodes: string[] = Array.isArray(data.cancelledClasses)
+        ? data.cancelledClasses.map((c: string) => c.trim().toUpperCase())
+        : [];
+
+      setEvents((prev) => {
+        const updatedPrev =
+          cancelledCodes.length > 0
+            ? prev.map((ev) => {
+                const evCode = (ev.courseCode || ev.title).trim().toUpperCase();
+                const isMatch = cancelledCodes.some(
+                  (code) => evCode.includes(code) || code.includes(evCode)
+                );
+                if (ev.type === "class" && isMatch && !ev.attendanceMarked) {
+                  return { ...ev, attendanceMarked: "cancelled" as const };
+                }
+                return ev;
+              })
+            : prev;
+        return [...updatedPrev, ...createdEvents].sort(
           (a, b) => Date.parse(a.startIso) - Date.parse(b.startIso)
-        )
-      );
+        );
+      });
+
+      if (cancelledCodes.length > 0) {
+        setCheckInToast(
+          `⊘ Marked ${cancelledCodes.join(", ")} as Cancelled — excluded from your 75% Attendance Guard.`
+        );
+        setTimeout(() => setCheckInToast(null), 4500);
+      }
+
       setStudyTopics((prev) => [...createdTopics, ...prev]);
       setDumps((prev) => [receipt, ...prev]);
       setActiveReceipt(receipt);
@@ -698,6 +867,25 @@ export default function DysAIDashboard() {
   };
 
   const toggleTask = (taskId: string) => {
+    const target = tasks.find((t) => t.id === taskId);
+    if (target && target.status !== "done") {
+      const isEarly =
+        !target.dueIso || Date.parse(target.dueIso) > Date.now();
+      const xpGain = isEarly ? 60 : 35;
+      awardXp(
+        xpGain,
+        isEarly
+          ? `Early Task Completion (+60 XP): ${target.title}`
+          : `Completed Task (+35 XP): ${target.title}`
+      );
+      setCheckInToast(
+        isEarly
+          ? `⚡ +60 XP Early Bird Bonus — Completed "${target.title}" ahead of deadline!`
+          : `⚡ +35 XP — Completed "${target.title}"`
+      );
+      setTimeout(() => setCheckInToast(null), 4000);
+    }
+
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId
@@ -708,6 +896,12 @@ export default function DysAIDashboard() {
   };
 
   const toggleSubtask = (taskId: string, subIndex: number) => {
+    const target = tasks.find((t) => t.id === taskId);
+    const sub = target?.subtasks[subIndex];
+    if (sub && !sub.completed) {
+      awardXp(15, `Completed Subtask: ${sub.title}`);
+    }
+
     setTasks((prev) =>
       prev.map((t) =>
         t.id === taskId
@@ -783,6 +977,10 @@ export default function DysAIDashboard() {
       ];
     });
 
+    if (present) {
+      awardXp(50, `Attended ${normalizedCode} Class (+50 XP)`);
+    }
+
     // 3. Sync with Convex DB via /api/attendance
     fetch("/api/attendance", {
       method: "POST",
@@ -796,10 +994,51 @@ export default function DysAIDashboard() {
 
     setCheckInToast(
       present
-        ? `✓ Checked in to ${normalizedCode} — synced to 75% Attendance Guard & Convex DB`
+        ? `✓ Checked in to ${normalizedCode} (+50 XP) — synced to 75% Attendance Guard & Convex DB`
         : `Logged missed class for ${normalizedCode} — synced to Convex DB`
     );
     setTimeout(() => setCheckInToast(null), 4500);
+  };
+
+  const markClassCancelled = (code: string, eventId?: string) => {
+    const normalizedCode = code.trim().toUpperCase();
+
+    if (eventId) {
+      setEvents((prev) =>
+        prev.map((ev) =>
+          ev.id === eventId ? { ...ev, attendanceMarked: "cancelled" } : ev
+        )
+      );
+      setDismissedCheckInIds((prev) => [...prev, eventId]);
+    }
+
+    fetch("/api/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        courseCode: normalizedCode,
+        present: false,
+        cancelled: true,
+        eventId,
+      }),
+    }).catch(() => {});
+
+    setCheckInToast(
+      `⊘ Marked ${normalizedCode} as Cancelled — excluded from your 75% Attendance Guard (no penalty)`
+    );
+    setTimeout(() => setCheckInToast(null), 4500);
+  };
+
+  const completeStudyBlock = (ev: CalendarEvent) => {
+    if (ev.studyCompleted) return;
+    setEvents((prev) =>
+      prev.map((item) =>
+        item.id === ev.id ? { ...item, studyCompleted: true } : item
+      )
+    );
+    awardXp(40, `Completed Study Block (+40 XP): ${ev.title}`);
+    setCheckInToast(`⚡ +40 XP — Completed "${ev.title}"!`);
+    setTimeout(() => setCheckInToast(null), 4000);
   };
 
   const updateTopicConfidence = (topicId: string, confidence: Confidence) => {
@@ -1242,27 +1481,19 @@ export default function DysAIDashboard() {
             </button>
 
             <button
-              onClick={() => setShowHandbookModal(true)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+              onClick={() => setShowRewardsModal(true)}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
                 isPaper
-                  ? "border-[#EA580C]/30 bg-[#EA580C]/10 hover:bg-[#EA580C]/15 text-[#EA580C]"
-                  : "border-orange-500/30 bg-orange-500/10 hover:bg-orange-500/15 text-orange-400"
+                  ? "border-[#EA580C]/35 bg-[#EA580C]/10 hover:bg-[#EA580C]/15 text-[#EA580C]"
+                  : "border-orange-500/35 bg-orange-500/10 hover:bg-orange-500/15 text-orange-400"
               }`}
+              title="Open XP & Rewards Vault"
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Babcock Handbook</span>
-            </button>
-
-            <button
-              onClick={() => setShowKeyModal(true)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-                isPaper
-                  ? "border-[#DCD9CE] bg-white hover:bg-[#EFECE4] text-[#4A4945]"
-                  : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-zinc-300"
-              }`}
-            >
-              <KeyRound className="w-3 h-3" />
-              <span className="hidden sm:inline">API Key</span>
+              <Award className="w-3.5 h-3.5" />
+              <span className="font-mono-code">
+                {xpPoints} XP · Lvl {Math.floor(xpPoints / 150) + 1}
+              </span>
+              <span className="hidden sm:inline opacity-80">· Rewards</span>
             </button>
 
             <button
@@ -1610,7 +1841,7 @@ export default function DysAIDashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <button
                   onClick={() =>
                     recordAttendance(
@@ -1624,7 +1855,24 @@ export default function DysAIDashboard() {
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition cursor-pointer shadow-xs"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  Yes, I&apos;m in class
+                  Yes, in class (+50 XP)
+                </button>
+                <button
+                  onClick={() =>
+                    markClassCancelled(
+                      pendingClassCheckIn.courseCode ||
+                        pendingClassCheckIn.title,
+                      pendingClassCheckIn.id
+                    )
+                  }
+                  title="Class was cancelled by lecturer — does not affect 75% attendance"
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                    isPaper
+                      ? "border-[#E2DFD5] bg-white hover:bg-amber-500/10 hover:text-amber-700"
+                      : "border-white/10 bg-white/[0.04] hover:bg-amber-500/20 hover:text-amber-300"
+                  }`}
+                >
+                  ⊘ Cancelled
                 </button>
                 <button
                   onClick={() =>
@@ -1909,30 +2157,71 @@ export default function DysAIDashboard() {
                                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                                           ✓ In Class
                                         </span>
+                                      ) : ev.attendanceMarked ===
+                                        "cancelled" ? (
+                                        <span
+                                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                          title="Excluded from total classes held — no impact on your 75% Attendance Guard"
+                                        >
+                                          ⊘ Cancelled
+                                        </span>
                                       ) : ev.attendanceMarked === "absent" ? (
                                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-600 dark:text-rose-400">
                                           ✕ Missed
                                         </span>
-                                      ) : nowMs >=
-                                        startMs + 30 * 60 * 1000 ? (
-                                        <button
-                                          onClick={() =>
-                                            recordAttendance(
-                                              ev.courseCode || ev.title,
-                                              true,
-                                              ev.id,
-                                              ev.title
-                                            )
-                                          }
-                                          className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-500 transition cursor-pointer"
-                                          title="Confirm you are in class (30m+ in)"
-                                        >
-                                          Check-In ✓
-                                        </button>
                                       ) : (
-                                        <span className="font-mono-code text-[10px] opacity-45">
-                                          Opens +30m
+                                        <div className="flex items-center gap-1">
+                                          {nowMs >=
+                                          startMs + 30 * 60 * 1000 ? (
+                                            <button
+                                              onClick={() =>
+                                                recordAttendance(
+                                                  ev.courseCode || ev.title,
+                                                  true,
+                                                  ev.id,
+                                                  ev.title
+                                                )
+                                              }
+                                              className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-500 transition cursor-pointer"
+                                              title="Confirm you are in class (+50 XP)"
+                                            >
+                                              Check-In ✓
+                                            </button>
+                                          ) : (
+                                            <span className="font-mono-code text-[10px] opacity-45">
+                                              Opens +30m
+                                            </span>
+                                          )}
+                                          <button
+                                            onClick={() =>
+                                              markClassCancelled(
+                                                ev.courseCode || ev.title,
+                                                ev.id
+                                              )
+                                            }
+                                            className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-current/20 opacity-65 hover:opacity-100 transition cursor-pointer"
+                                            title="Mark class as cancelled (excluded from 75% Attendance Guard)"
+                                          >
+                                            Cancelled
+                                          </button>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                  {ev.type === "study" && (
+                                    <>
+                                      {ev.studyCompleted ? (
+                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-600 dark:text-violet-300">
+                                          ✓ +40 XP
                                         </span>
+                                      ) : (
+                                        <button
+                                          onClick={() => completeStudyBlock(ev)}
+                                          className="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-600 text-white hover:bg-violet-500 transition cursor-pointer"
+                                          title="Complete study block (+40 XP)"
+                                        >
+                                          +40 XP ✓
+                                        </button>
                                       )}
                                     </>
                                   )}
@@ -2562,6 +2851,52 @@ export default function DysAIDashboard() {
               </div>
             </div>
 
+            {/* Execution XP & Rewards Vault Card */}
+            <div
+              className={`rounded-xl border p-3.5 space-y-2.5 ${
+                isPaper
+                  ? "border-[#E2DFD5] bg-[#FAF9F5]"
+                  : "border-white/[0.08] bg-white/[0.03]"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-[#EA580C]" />
+                  <span className="text-xs font-semibold">
+                    Rewards Vault · Lvl {Math.floor(xpPoints / 150) + 1}
+                  </span>
+                </div>
+                <span className="font-mono-code text-xs font-bold text-[#EA580C]">
+                  {xpPoints} XP
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-1 text-[10px] font-mono-code opacity-75">
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  Class +50 XP
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-700 dark:text-violet-300">
+                  Study +40 XP
+                </span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                  Early Task +60 XP
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRewardsModal(true)}
+                className={`w-full py-1.5 px-3 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
+                  isPaper
+                    ? "bg-[#141413] text-white hover:bg-[#2a2a28]"
+                    : "bg-white/10 text-white hover:bg-white/20"
+                }`}
+              >
+                <span>Unlock Perks &amp; Rewards</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
             {/* Brain Dump History Footer */}
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
@@ -2600,6 +2935,129 @@ export default function DysAIDashboard() {
           </div>
         </section>
       </main>
+
+      {/* EXECUTION XP & REWARDS VAULT MODAL */}
+      {showRewardsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div
+            className={`w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden ${
+              isPaper
+                ? "border-[#DCD9CE] bg-white text-[#141413]"
+                : "border-white/10 bg-[#121216] text-white"
+            }`}
+          >
+            <div
+              className={`px-6 py-4 border-b flex items-center justify-between gap-4 ${
+                isPaper ? "border-[#E8E6DF]" : "border-white/10"
+              }`}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono-code text-xs px-2.5 py-0.5 rounded-full bg-[#EA580C] text-white font-semibold">
+                    {xpPoints} XP Available · Level{" "}
+                    {Math.floor(xpPoints / 150) + 1}
+                  </span>
+                </div>
+                <h3 className="font-serif-display text-2xl tracking-tight mt-1">
+                  Execution Rewards &amp; Perks Vault
+                </h3>
+                <p className="text-xs opacity-60">
+                  Earn XP by attending classes (+50 XP), study blocks (+40 XP),
+                  and completing tasks early (+60 XP)
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRewardsModal(false)}
+                className="p-1.5 rounded-lg opacity-60 hover:opacity-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {rewards.map((perk) => {
+                  const canAfford = xpPoints >= perk.costXp;
+                  return (
+                    <div
+                      key={perk.id}
+                      className={`rounded-xl border p-4 flex flex-col justify-between gap-3 ${
+                        isPaper
+                          ? "border-[#E2DFD5] bg-[#FAF9F5]"
+                          : "border-white/10 bg-white/[0.03]"
+                      }`}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono-code text-[11px] font-bold text-[#EA580C]">
+                            {perk.costXp} XP
+                          </span>
+                          {perk.redeemedCount > 0 && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold">
+                              Unlocked {perk.redeemedCount}x
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-sm leading-snug">
+                          {perk.title}
+                        </p>
+                        <p className="opacity-70 leading-relaxed text-[11px]">
+                          {perk.description}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!canAfford}
+                        onClick={() => redeemReward(perk)}
+                        className={`w-full py-2 px-3 rounded-lg font-semibold text-xs transition cursor-pointer disabled:opacity-40 ${
+                          canAfford
+                            ? "bg-[#EA580C] hover:bg-[#d94e07] text-white"
+                            : isPaper
+                              ? "bg-[#E6E3D8] text-[#6E6D68]"
+                              : "bg-white/10 text-zinc-400"
+                        }`}
+                      >
+                        {canAfford
+                          ? `Redeem for ${perk.costXp} XP`
+                          : `Need ${perk.costXp - xpPoints} more XP`}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Recent XP Activity */}
+              <div className="space-y-2 pt-2 border-t border-current/10">
+                <h4 className="font-semibold uppercase tracking-wider text-[11px] opacity-60">
+                  Recent XP Ledger
+                </h4>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {xpHistory.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`rounded-lg px-3 py-2 flex items-center justify-between ${
+                        isPaper ? "bg-[#F6F5F0]" : "bg-white/[0.03]"
+                      }`}
+                    >
+                      <span className="truncate pr-2">{item.label}</span>
+                      <span
+                        className={`font-mono-code font-semibold shrink-0 ${
+                          item.delta >= 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-[#EA580C]"
+                        }`}
+                      >
+                        {item.delta >= 0 ? `+${item.delta} XP` : `${item.delta} XP`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1. AI TEACHER & EXAM PREP STUDIO MODAL */}
       {activeTutorTopic && (

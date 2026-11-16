@@ -89,8 +89,9 @@ export const checkLiveClassAttendancePrompts = internalMutation({
 });
 
 /**
- * Atomic mutation triggered when the user taps "Yes, I'm in class" or "Missed"
+ * Atomic mutation triggered when the user taps "Yes, I'm in class", "Missed", or "Cancelled"
  * from the mobile lock-screen notification or web live banner.
+ * When `cancelled` is true, the class is marked as cancelled and excluded from the 75% Attendance Guard.
  */
 export const respondToAttendanceCheck = mutation({
   args: {
@@ -98,9 +99,14 @@ export const respondToAttendanceCheck = mutation({
     eventId: v.optional(v.id("events")),
     courseCode: v.string(),
     present: v.boolean(),
+    cancelled: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const outcome = args.present ? "present" : "absent";
+    const outcome: "present" | "absent" | "cancelled" = args.cancelled
+      ? "cancelled"
+      : args.present
+        ? "present"
+        : "absent";
 
     // 1. Update event attendance status if eventId is provided
     if (args.eventId) {
@@ -118,8 +124,17 @@ export const respondToAttendanceCheck = mutation({
       });
     }
 
-    // 3. Auto-increment the course's 75% Attendance Guard counters in Convex DB
     const normalizedCode = args.courseCode.trim().toUpperCase();
+
+    // 3. If the class was cancelled, do NOT increment totalClassesHeld or attendedClasses!
+    if (args.cancelled) {
+      return {
+        courseCode: normalizedCode,
+        outcome: "cancelled",
+      };
+    }
+
+    // 4. Otherwise auto-increment the course's 75% Attendance Guard counters in Convex DB
     const course = await ctx.db
       .query("courses")
       .withIndex("by_code", (q) => q.eq("code", normalizedCode))

@@ -79,7 +79,11 @@ export default defineSchema({
     notified15m: v.optional(v.boolean()),
     attendancePromptSent: v.optional(v.boolean()),
     attendanceMarked: v.optional(
-      v.union(v.literal("present"), v.literal("absent"))
+      v.union(
+        v.literal("present"),
+        v.literal("absent"),
+        v.literal("cancelled")
+      )
     ),
     updatedAt: v.number(),
   })
@@ -139,7 +143,11 @@ export default defineSchema({
     eventId: v.optional(v.id("events")),
     courseCode: v.optional(v.string()),
     resolvedOutcome: v.optional(
-      v.union(v.literal("present"), v.literal("absent"))
+      v.union(
+        v.literal("present"),
+        v.literal("absent"),
+        v.literal("cancelled")
+      )
     ),
     actionUrl: v.optional(v.string()),
     read: v.boolean(),

@@ -65,7 +65,8 @@ Decompose the user's raw brain dump into structured calendar events, actionable 
 Rules:
 1. Calculate exact ISO 8601 timestamps based on Current Date/Time.
 2. Respect Babcock University campus conventions (New Horizon, SAT, E102, Hostel curfew ~9:30 PM, and Sabbath hours Friday sundown to Saturday sundown unless the user explicitly overrides).
-3. In "coaching":
+3. If the user mentions that a class was cancelled (or lecturer didn't hold class), include its course code in "cancelledClasses" (e.g. ["COS 201"]) and do NOT create a new calendar event for it—cancelled classes are excluded from totalClassesHeld so they do not affect the 75% attendance threshold.
+4. In "coaching":
    - "teacherNote": Explain any weak/mentioned academic concept simply with a clear mental model or concrete study strategy.
    - "attendanceWarning": If a referenced course is below 75% attendance or has <= 1 safe skip left, warn the student about Babcock's 75% exam eligibility rule and state exact classes needed; otherwise null.
    - "testPrediction": Based on the course lecturer's teachingStyle & testPattern, warn if an impromptu quiz or test is likely soon and how the lecturer asks questions; otherwise null.
@@ -132,6 +133,10 @@ Rules:
               required: ["courseCode", "topic", "confidence"],
             },
           },
+          cancelledClasses: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+          },
           coaching: {
             type: Type.OBJECT,
             properties: {
@@ -143,7 +148,14 @@ Rules:
             required: ["teacherNote"],
           },
         },
-        required: ["summary", "tasks", "events", "studyTopics", "coaching"],
+        required: [
+          "summary",
+          "tasks",
+          "events",
+          "studyTopics",
+          "cancelledClasses",
+          "coaching",
+        ],
       },
     };
 
