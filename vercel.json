@@ -1,6 +1,0 @@
-{
-  "buildCommand": "npm --workspace=@dysai/web run build",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "outputDirectory": "apps/web/.next"
-}
