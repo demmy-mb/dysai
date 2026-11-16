@@ -1496,6 +1496,19 @@ export default function DysAIDashboard() {
               <span className="hidden sm:inline opacity-80">· Rewards</span>
             </button>
 
+            <a
+              href="/mobile"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                isPaper
+                  ? "border-[#DCD9CE] bg-white hover:bg-[#EFECE4] text-[#141413]"
+                  : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07] text-zinc-200"
+              }`}
+              title="Open Copilot × Jomo Mobile App View"
+            >
+              <span>Mobile UI</span>
+              <ArrowUpRight className="w-3 h-3" />
+            </a>
+
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className={`relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
