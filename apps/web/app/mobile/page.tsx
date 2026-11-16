@@ -347,9 +347,9 @@ export default function DysAIMobileApp() {
           : "bg-[#090A0F] text-[#F8FAFC] border-x border-white/[0.07]"
       }`}
     >
-      {/* FLOATING TOP BAR (UIUX-DESIGNER COMPLIANT: SVG ICONS ONLY, 44PX TARGETS) */}
+      {/* FLOATING TOP BAR (UIUX-DESIGNER + MOBILE-NATIVE COMPLIANT) */}
       <header
-        className={`sticky top-0 z-30 px-5 pt-4 pb-3 backdrop-blur-xl border-b flex items-center justify-between ${
+        className={`translucent-chrome safe-top sticky top-0 z-30 px-5 pb-3 backdrop-blur-xl border-b flex items-center justify-between ${
           isLight
             ? "bg-[#F8FAFC]/90 border-slate-200/80"
             : "bg-[#090A0F]/90 border-white/[0.06]"
@@ -424,20 +424,20 @@ export default function DysAIMobileApp() {
 
       {/* TRANSIENT TOAST */}
       {toast && (
-        <div className="mx-5 mt-3 rounded-xl bg-[#3B82F6] text-white px-4 py-2.5 text-xs font-semibold shadow-md flex items-center gap-2">
+        <div className="enter-surface mx-5 mt-3 rounded-xl bg-[#3B82F6] text-white px-4 py-2.5 text-xs font-semibold shadow-md flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{toast}</span>
         </div>
       )}
 
       {/* MAIN VIEWPORT */}
-      <main className="flex-1 px-5 pt-4 pb-28 space-y-4 overflow-y-auto">
+      <main className="flex-1 px-5 pt-4 pb-28 space-y-4 overflow-y-auto overscroll-contain">
         {activeTab === "dump" && (
           <>
             {/* 1. HERO: THE BRAIN DUMP SURFACE (PRIMARY ACTION) */}
             <form
               onSubmit={handleBrainDump}
-              className={`rounded-2xl border p-4 space-y-3.5 transition ${
+              className={`rounded-2xl border p-4 space-y-3.5 ${
                 isLight
                   ? "bg-white border-slate-200/90 shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
                   : "bg-[#12151E] border-white/[0.08]"
@@ -460,7 +460,7 @@ export default function DysAIMobileApp() {
               </div>
 
               <div
-                className={`rounded-xl border p-3 transition focus-within:border-[#3B82F6] ${
+                className={`rounded-xl border p-3 focus-within:border-[#3B82F6] ${
                   isLight
                     ? "bg-[#F8FAFC] border-slate-200"
                     : "bg-[#090A0F] border-white/[0.07]"
@@ -469,6 +469,7 @@ export default function DysAIMobileApp() {
                 <textarea
                   id="mobile-brain-dump"
                   rows={3}
+                  enterKeyHint="send"
                   value={dumpInput}
                   onChange={(e) => setDumpInput(e.target.value)}
                   placeholder="Type a messy thought... e.g. 'COS 201 class today was cancelled, study Discrete Structures at 7pm for 90m, finish IFT 211 lab by Thursday'"
@@ -487,7 +488,7 @@ export default function DysAIMobileApp() {
                   <button
                     type="submit"
                     disabled={isProcessing || !dumpInput.trim()}
-                    className="min-h-[40px] px-4 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] active:scale-[0.98] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                    className="min-h-[40px] px-4 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>{isProcessing ? "Parsing..." : "Capture"}</span>
                     <ArrowUp className="w-4 h-4" strokeWidth={2.25} />
@@ -496,13 +497,13 @@ export default function DysAIMobileApp() {
               </div>
 
               {/* Single-row horizontal scroll-snap prompt pills */}
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+              <div className="chip-carousel flex gap-2 overflow-x-auto pb-0.5">
                 {PROMPT_SUGGESTIONS.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setDumpInput(item.text)}
-                    className={`shrink-0 min-h-[36px] px-3 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                    className={`shrink-0 min-h-[36px] px-3 rounded-xl border text-xs font-medium cursor-pointer ${
                       isLight
                         ? "bg-[#F8FAFC] border-slate-200 text-slate-700 hover:bg-slate-100"
                         : "bg-[#191D29] border-white/[0.06] text-slate-300 hover:bg-white/[0.08]"
@@ -517,7 +518,7 @@ export default function DysAIMobileApp() {
             {/* Live Action Receipt */}
             {lastReceipt && (
               <div
-                className={`rounded-2xl border p-4 space-y-2 text-xs ${
+                className={`enter-surface rounded-2xl border p-4 space-y-2 text-xs ${
                   isLight
                     ? "bg-emerald-50/80 border-emerald-200 text-slate-900"
                     : "bg-emerald-500/10 border-emerald-500/25 text-slate-100"
@@ -1194,10 +1195,10 @@ export default function DysAIMobileApp() {
         )}
       </main>
 
-      {/* FLOATING BOTTOM NAVIGATION BAR (UIUX-DESIGNER RULE: TOP-4/BOTTOM-4 SPACING, 44PX TARGETS, SVG ICONS) */}
-      <nav className="fixed bottom-4 left-4 right-4 max-w-[398px] mx-auto z-40">
+      {/* FLOATING BOTTOM NAVIGATION BAR (UIUX-DESIGNER + MOBILE-NATIVE SAFE-AREA RULE) */}
+      <nav className="safe-bottom fixed bottom-2 left-4 right-4 max-w-[398px] mx-auto z-40">
         <div
-          className={`rounded-2xl p-1.5 border backdrop-blur-xl grid grid-cols-4 gap-1 shadow-xl ${
+          className={`translucent-chrome rounded-2xl p-1.5 border backdrop-blur-xl grid grid-cols-4 gap-1 shadow-xl ${
             isLight
               ? "bg-white/95 border-slate-200/90"
               : "bg-[#12151E]/95 border-white/[0.08]"

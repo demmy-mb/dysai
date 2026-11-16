@@ -1,8 +1,20 @@
 @import "tailwindcss";
 
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light dark;
+}
+
 * {
   box-sizing: border-box;
+}
+
+html {
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
 }
 
 body {
@@ -10,6 +22,72 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-optical-sizing: auto;
+  transition: background-color 180ms var(--ease-out), color 180ms var(--ease-out);
+}
+
+/* Mobile-native rule #4: prevent iOS Safari auto-zoom on focus */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Mobile-native rule #5 & #8: kill 300ms tap delay and prevent long-press text selection on controls */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    transform 140ms var(--ease-out),
+    background-color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out),
+    opacity 160ms var(--ease-out);
+}
+
+/* Emil-design-eng rule: every button responds on pointer-down (:active) */
+button:not(:disabled):active,
+[role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* Emil-design-eng rule: animate enter from scale(0.96) + opacity, never scale(0) */
+.enter-surface {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 220ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+}
+
+/* Mobile-native rule #9: horizontal chip carousels own horizontal axis, keep vertical scroll */
+.chip-carousel {
+  touch-action: pan-y;
+  scroll-snap-type: x mandatory;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.chip-carousel::-webkit-scrollbar {
+  display: none;
+}
+.chip-carousel > * {
+  scroll-snap-align: start;
+}
+
+/* Safe area helpers for notch and home indicator */
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+}
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 .font-mono-code {
@@ -17,19 +95,34 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Remove serif class fallback to clean geometric sans */
 .font-serif-display {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 700;
   letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* Apple-design & Emil-design-eng rule: respect reduced motion & reduced transparency */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+    scroll-behavior: auto !important;
+  }
+  button:not(:disabled):active,
+  [role="button"]:active,
+  .enter-surface {
+    transform: none !important;
+  }
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+@media (prefers-reduced-transparency: reduce) {
+  .translucent-chrome {
+    backdrop-filter: none !important;
+  }
 }
 
 ::-webkit-scrollbar {
