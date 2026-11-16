@@ -168,7 +168,7 @@ export default function DysAIDashboard() {
 
   const [mounted, setMounted] = useState(false);
   const [nowMs, setNowMs] = useState<number>(0);
-  const [theme, setTheme] = useState<"paper" | "obsidian">("paper");
+  const [theme, setTheme] = useState<"paper" | "obsidian">("obsidian");
   const [dumpInput, setDumpInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -1412,18 +1412,18 @@ export default function DysAIDashboard() {
 
   return (
     <div
-      className={`min-h-screen transition-colors duration-200 ${
+      className={`min-h-[100dvh] transition-colors duration-200 ${
         isPaper
-          ? "bg-[#F6F5F0] text-[#141413] selection:bg-orange-500/20"
-          : "bg-[#0A0A0C] text-[#F3F3F1] selection:bg-orange-500/30"
+          ? "bg-[#F8FAFC] text-[#0F172A] selection:bg-blue-500/20"
+          : "bg-[#090A0F] text-[#F8FAFC] selection:bg-blue-500/30"
       }`}
     >
       {/* MINIMAL ARCHITECTURAL HEADER */}
       <header
         className={`sticky top-0 z-30 border-b backdrop-blur-md transition-colors ${
           isPaper
-            ? "border-[#E4E2DA] bg-[#F6F5F0]/85"
-            : "border-white/[0.08] bg-[#0A0A0C]/85"
+            ? "border-slate-200 bg-[#F8FAFC]/90"
+            : "border-white/[0.08] bg-[#090A0F]/90"
         }`}
       >
         <div className="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between gap-4">

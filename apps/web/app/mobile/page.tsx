@@ -7,13 +7,21 @@ import {
   RotateCcw,
   Award,
   MapPin,
-  Sparkles,
   Calendar,
   ShieldCheck,
-  CornerDownLeft,
   Monitor,
   Plus,
   Minus,
+  ArrowUp,
+  Ban,
+  Clock,
+  Sparkles,
+  CheckCircle2,
+  Circle,
+  Lock,
+  Unlock,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   CourseProfile,
@@ -47,17 +55,17 @@ interface TaskItem {
   brainDumpId?: string;
 }
 
-const MOBILE_CHIPS = [
+const PROMPT_SUGGESTIONS = [
   {
-    label: "⊘ COS 201 cancelled",
+    label: "COS 201 cancelled today",
     text: "COS 201 class today was cancelled, study Discrete Structures at 7pm for 90 minutes",
   },
   {
-    label: "📅 Move IFT 211 test",
+    label: "Move IFT 211 test to Friday",
     text: "IFT 211 test moved to Friday 10am at E102, review Flip-Flops tonight",
   },
   {
-    label: "⚡ Founder sprint",
+    label: "Founder sprint tomorrow",
     text: "Ship onboarding update by tomorrow 5pm and review growth metrics at 8pm",
   },
 ];
@@ -65,6 +73,7 @@ const MOBILE_CHIPS = [
 export default function DysAIMobileApp() {
   const [mounted, setMounted] = useState(false);
   const [nowMs, setNowMs] = useState<number>(0);
+  const [isLight, setIsLight] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "dump" | "timeline" | "guard" | "rewards"
   >("dump");
@@ -134,7 +143,7 @@ export default function DysAIMobileApp() {
 
   const showNotice = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 4000);
+    setTimeout(() => setToast(null), 3500);
   };
 
   const addXp = (delta: number) => {
@@ -206,9 +215,9 @@ export default function DysAIMobileApp() {
 
     if (outcome === "present") {
       addXp(50);
-      showNotice(`✓ Checked in to ${code} (+50 XP)`);
+      showNotice(`Checked in to ${code} (+50 XP)`);
     } else if (outcome === "cancelled") {
-      showNotice(`⊘ ${code} marked Cancelled (0 impact on 75% Guard)`);
+      showNotice(`${code} marked Cancelled (excluded from 75% guard)`);
     } else {
       showNotice(`Logged missed class for ${code}`);
     }
@@ -314,7 +323,7 @@ export default function DysAIMobileApp() {
       });
       setDumpInput("");
       addXp(15);
-      showNotice("✦ Brain Dump synced (+15 XP)");
+      showNotice("Brain Dump synced (+15 XP)");
     } catch (err: unknown) {
       showNotice(
         err instanceof Error ? err.message : "Could not process Brain Dump"
@@ -324,30 +333,48 @@ export default function DysAIMobileApp() {
     }
   };
 
-  const atRiskCount = courses.filter(
-    (c) => computeAttendanceStatus(c).isAtRisk
+  const level = Math.floor(xpPoints / 150) + 1;
+  const levelProgressPct = Math.round(((xpPoints % 150) / 150) * 100);
+  const safeCoursesCount = courses.filter(
+    (c) => !computeAttendanceStatus(c).isAtRisk
   ).length;
 
   return (
     <div
-      className="min-h-screen flex flex-col justify-between max-w-md mx-auto text-[#F5F7FA] border-x border-white/[0.08]"
-      style={{
-        background:
-          "radial-gradient(circle at 50% 0%, #182036 0%, #0B0D13 55%)",
-      }}
+      className={`min-h-[100dvh] flex flex-col justify-between max-w-[430px] mx-auto transition-colors duration-200 ${
+        isLight
+          ? "bg-[#F8FAFC] text-[#0F172A] border-x border-slate-200"
+          : "bg-[#090A0F] text-[#F8FAFC] border-x border-white/[0.07]"
+      }`}
     >
-      {/* COPILOT × JOMO STATUS HEADER */}
-      <header className="sticky top-0 z-30 px-5 pt-4 pb-3 backdrop-blur-xl bg-[#0B0D13]/80 border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center text-emerald-300 text-xs font-bold">
-            ✦
+      {/* FLOATING TOP BAR (UIUX-DESIGNER COMPLIANT: SVG ICONS ONLY, 44PX TARGETS) */}
+      <header
+        className={`sticky top-0 z-30 px-5 pt-4 pb-3 backdrop-blur-xl border-b flex items-center justify-between ${
+          isLight
+            ? "bg-[#F8FAFC]/90 border-slate-200/80"
+            : "bg-[#090A0F]/90 border-white/[0.06]"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-[#3B82F6] text-white flex items-center justify-center shadow-sm">
+            <Sparkles className="w-4 h-4" strokeWidth={2} />
           </div>
           <div>
-            <span className="font-bold tracking-tight text-sm text-white">
+            <span className="font-bold tracking-tight text-base block leading-none">
               DysAI
             </span>
-            <span className="block text-[10px] text-emerald-300 font-mono-code">
-              SHIELD ACTIVE
+            <span
+              className={`text-xs mt-1 block ${
+                isLight ? "text-slate-500" : "text-slate-400"
+              }`}
+            >
+              {mounted
+                ? new Date().toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "Executive OS"}
             </span>
           </div>
         </div>
@@ -355,96 +382,151 @@ export default function DysAIMobileApp() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab("rewards")}
-            className="px-3 py-1 rounded-full bg-emerald-400/15 border border-emerald-400/30 text-emerald-300 font-mono-code text-xs font-bold cursor-pointer"
+            className={`min-h-[38px] px-3 rounded-xl border flex items-center gap-1.5 text-xs font-semibold transition cursor-pointer ${
+              isLight
+                ? "bg-white border-slate-200 text-slate-900 hover:bg-slate-100"
+                : "bg-[#12151E] border-white/[0.08] text-white hover:bg-[#191D29]"
+            }`}
           >
-            ⚡ {xpPoints} XP
+            <Award className="w-4 h-4 text-[#3B82F6]" strokeWidth={2} />
+            <span className="font-mono-code">{xpPoints} XP</span>
+          </button>
+
+          <button
+            onClick={() => setIsLight(!isLight)}
+            aria-label="Toggle color theme"
+            className={`h-9 w-9 rounded-xl border flex items-center justify-center transition cursor-pointer ${
+              isLight
+                ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
+                : "bg-[#12151E] border-white/[0.08] text-slate-300 hover:bg-[#191D29]"
+            }`}
+          >
+            {isLight ? (
+              <Moon className="w-4 h-4" strokeWidth={1.75} />
+            ) : (
+              <Sun className="w-4 h-4" strokeWidth={1.75} />
+            )}
           </button>
 
           <Link
             href="/"
-            className="p-2 rounded-full bg-white/[0.06] border border-white/10 text-slate-300 hover:text-white"
-            title="Switch to Desktop View"
+            aria-label="Open Desktop View"
+            className={`h-9 w-9 rounded-xl border flex items-center justify-center transition ${
+              isLight
+                ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-100"
+                : "bg-[#12151E] border-white/[0.08] text-slate-300 hover:bg-[#191D29]"
+            }`}
           >
-            <Monitor className="w-3.5 h-3.5" />
+            <Monitor className="w-4 h-4" strokeWidth={1.75} />
           </Link>
         </div>
       </header>
 
-      {/* TOAST BANNER */}
+      {/* TRANSIENT TOAST */}
       {toast && (
-        <div className="mx-4 mt-3 rounded-2xl bg-emerald-400 text-[#090B10] px-4 py-2.5 text-xs font-bold shadow-lg">
-          {toast}
+        <div className="mx-5 mt-3 rounded-xl bg-[#3B82F6] text-white px-4 py-2.5 text-xs font-semibold shadow-md flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{toast}</span>
         </div>
       )}
 
-      {/* MAIN SCROLLABLE VIEWPORT */}
-      <main className="flex-1 px-4 pt-3 pb-28 space-y-3.5 overflow-y-auto">
+      {/* MAIN VIEWPORT */}
+      <main className="flex-1 px-5 pt-4 pb-28 space-y-4 overflow-y-auto">
         {activeTab === "dump" && (
           <>
-            {/* 1. HERO: THE BRAIN DUMP COMPOSER (COPILOT SQUIRCLE CARD) */}
+            {/* 1. HERO: THE BRAIN DUMP SURFACE (PRIMARY ACTION) */}
             <form
               onSubmit={handleBrainDump}
-              className="rounded-[28px] p-4 border border-white/12 shadow-2xl space-y-3"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(30, 37, 56, 0.92) 0%, rgba(19, 23, 34, 0.96) 100%)",
-              }}
+              className={`rounded-2xl border p-4 space-y-3.5 transition ${
+                isLight
+                  ? "bg-white border-slate-200/90 shadow-[0_8px_30px_rgba(15,23,42,0.04)]"
+                  : "bg-[#12151E] border-white/[0.08]"
+              }`}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-base font-bold tracking-tight text-white">
-                    Brain Dump
-                  </h1>
-                  <p className="text-xs text-slate-400">
-                    Type once — populates Calendar, Tasks &amp; 75% Guard
-                  </p>
-                </div>
-                <span className="text-[10px] font-mono-code px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300">
-                  2.5 Flash
+                <label
+                  htmlFor="mobile-brain-dump"
+                  className="text-sm font-bold tracking-tight"
+                >
+                  Brain Dump
+                </label>
+                <span
+                  className={`text-xs ${
+                    isLight ? "text-slate-500" : "text-slate-400"
+                  }`}
+                >
+                  Auto-syncs Calendar &amp; Tasks
                 </span>
               </div>
 
-              <textarea
-                rows={3}
-                value={dumpInput}
-                onChange={(e) => setDumpInput(e.target.value)}
-                placeholder="What's happening? e.g. 'COS 201 class today was cancelled, study Discrete Structures at 7pm for 90m, finish IFT 211 lab by Thursday'..."
-                className="w-full rounded-[20px] p-3.5 text-xs text-white placeholder:text-slate-400 border border-white/10 bg-[#090B10]/80 focus:border-emerald-400/60 focus:outline-none resize-none leading-relaxed"
-              />
+              <div
+                className={`rounded-xl border p-3 transition focus-within:border-[#3B82F6] ${
+                  isLight
+                    ? "bg-[#F8FAFC] border-slate-200"
+                    : "bg-[#090A0F] border-white/[0.07]"
+                }`}
+              >
+                <textarea
+                  id="mobile-brain-dump"
+                  rows={3}
+                  value={dumpInput}
+                  onChange={(e) => setDumpInput(e.target.value)}
+                  placeholder="Type a messy thought... e.g. 'COS 201 class today was cancelled, study Discrete Structures at 7pm for 90m, finish IFT 211 lab by Thursday'"
+                  className="w-full text-base leading-relaxed bg-transparent focus:outline-none resize-none placeholder:text-slate-400"
+                />
 
-              {/* Quick Intent Chips */}
-              <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-                {MOBILE_CHIPS.map((chip, idx) => (
+                <div className="flex items-center justify-between pt-2 border-t border-current/5">
+                  <span
+                    className={`text-xs font-mono-code ${
+                      isLight ? "text-slate-500" : "text-slate-400"
+                    }`}
+                  >
+                    +15 XP per capture
+                  </span>
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing || !dumpInput.trim()}
+                    className="min-h-[40px] px-4 rounded-xl bg-[#3B82F6] hover:bg-[#2563EB] active:scale-[0.98] disabled:opacity-40 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <span>{isProcessing ? "Parsing..." : "Capture"}</span>
+                    <ArrowUp className="w-4 h-4" strokeWidth={2.25} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Single-row horizontal scroll-snap prompt pills */}
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                {PROMPT_SUGGESTIONS.map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setDumpInput(chip.text)}
-                    className="shrink-0 text-xs px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-slate-200 font-medium cursor-pointer transition"
+                    onClick={() => setDumpInput(item.text)}
+                    className={`shrink-0 min-h-[36px] px-3 rounded-xl border text-xs font-medium transition cursor-pointer ${
+                      isLight
+                        ? "bg-[#F8FAFC] border-slate-200 text-slate-700 hover:bg-slate-100"
+                        : "bg-[#191D29] border-white/[0.06] text-slate-300 hover:bg-white/[0.08]"
+                    }`}
                   >
-                    {chip.label}
+                    {item.label}
                   </button>
                 ))}
               </div>
-
-              <button
-                type="submit"
-                disabled={isProcessing || !dumpInput.trim()}
-                className="w-full py-3 rounded-[18px] bg-emerald-400 hover:bg-emerald-300 disabled:opacity-40 text-[#090B10] text-xs font-bold tracking-wide flex items-center justify-center gap-2 shadow-lg cursor-pointer transition"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>
-                  {isProcessing ? "Parsing..." : "Dump & Auto-Schedule"}
-                </span>
-                <CornerDownLeft className="w-3.5 h-3.5" />
-              </button>
             </form>
 
             {/* Live Action Receipt */}
             {lastReceipt && (
-              <div className="rounded-[24px] border border-emerald-400/35 bg-emerald-400/10 p-3.5 space-y-2 text-xs">
+              <div
+                className={`rounded-2xl border p-4 space-y-2 text-xs ${
+                  isLight
+                    ? "bg-emerald-50/80 border-emerald-200 text-slate-900"
+                    : "bg-emerald-500/10 border-emerald-500/25 text-slate-100"
+                }`}
+              >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-300">
-                    ✦ Action Receipt (+15 XP)
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Synced to Calendar &amp; Convex
                   </span>
                   <button
                     onClick={() => {
@@ -456,69 +538,92 @@ export default function DysAIMobileApp() {
                       );
                       setLastReceipt(null);
                     }}
-                    className="inline-flex items-center gap-1 text-rose-300 font-semibold underline cursor-pointer"
+                    className="inline-flex items-center gap-1 text-rose-500 font-semibold hover:underline cursor-pointer"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                     Undo
                   </button>
                 </div>
-                <p className="text-slate-200 leading-relaxed">
+                <p className="leading-relaxed opacity-85">
                   {lastReceipt.summary}
                 </p>
               </div>
             )}
 
-            {/* 2. JOMO-STYLE 30-MIN CLASS CHECK-IN SHIELD */}
+            {/* 2. JOMO-STYLE 30-MIN LIVE CLASS CHECK-IN CARD */}
             {activeClassCheckIn && (
               <div
-                className="rounded-[26px] p-4 border border-amber-400/30 space-y-3"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(19, 23, 34, 0.94) 100%)",
-                }}
+                className={`rounded-2xl border p-4 space-y-3 ${
+                  isLight
+                    ? "bg-white border-blue-200 shadow-sm"
+                    : "bg-[#12151E] border-[#3B82F6]/35"
+                }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-mono-code text-[10px] font-bold uppercase tracking-wider">
-                    🛡️ 30m Class Check-In Open
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-[#3B82F6] animate-pulse" />
+                    <span className="text-xs font-semibold text-[#3B82F6]">
+                      30m Class Check-In
+                    </span>
+                  </div>
                   {activeClassCheckIn.location && (
-                    <span className="font-mono-code text-xs text-slate-400">
+                    <span
+                      className={`text-xs font-mono-code ${
+                        isLight ? "text-slate-500" : "text-slate-400"
+                      }`}
+                    >
                       {activeClassCheckIn.location}
                     </span>
                   )}
                 </div>
+
                 <div>
-                  <h3 className="text-sm font-bold text-white">
+                  <h2 className="text-sm font-bold">
                     Are you in{" "}
                     {activeClassCheckIn.courseCode || activeClassCheckIn.title}?
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">
-                    Confirm to earn +50 XP or mark Cancelled so your 75% guard
-                    isn&apos;t affected.
+                  </h2>
+                  <p
+                    className={`text-xs mt-0.5 ${
+                      isLight ? "text-slate-600" : "text-slate-400"
+                    }`}
+                  >
+                    Confirm attendance for +50 XP, or mark Cancelled so your
+                    75% pace is unaffected.
                   </p>
                 </div>
+
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() =>
                       handleClassOutcome(activeClassCheckIn, "present")
                     }
-                    className="py-2 rounded-2xl bg-emerald-400 text-[#090B10] text-xs font-bold cursor-pointer"
+                    className="min-h-[44px] rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
                   >
-                    ✓ Yes (+50)
+                    <Check className="w-4 h-4" />
+                    <span>In Class</span>
                   </button>
                   <button
                     onClick={() =>
                       handleClassOutcome(activeClassCheckIn, "cancelled")
                     }
-                    className="py-2 rounded-2xl bg-white/10 border border-white/15 text-amber-200 text-xs font-semibold cursor-pointer"
+                    className={`min-h-[44px] rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer ${
+                      isLight
+                        ? "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        : "border-white/10 bg-[#191D29] text-slate-200 hover:bg-white/10"
+                    }`}
                   >
-                    ⊘ Cancelled
+                    <Ban className="w-3.5 h-3.5" />
+                    <span>Cancelled</span>
                   </button>
                   <button
                     onClick={() =>
                       handleClassOutcome(activeClassCheckIn, "absent")
                     }
-                    className="py-2 rounded-2xl bg-white/5 border border-white/10 text-slate-300 text-xs cursor-pointer"
+                    className={`min-h-[44px] rounded-xl border text-xs font-medium transition cursor-pointer ${
+                      isLight
+                        ? "border-slate-200 bg-white text-slate-500 hover:text-rose-600"
+                        : "border-white/10 bg-transparent text-slate-400 hover:text-rose-400"
+                    }`}
                   >
                     Missed
                   </button>
@@ -526,83 +631,98 @@ export default function DysAIMobileApp() {
               </div>
             )}
 
-            {/* 3. COPILOT × JOMO 2-COLUMN BENTO SUMMARY */}
+            {/* 3. COPILOT × JOMO METRIC BENTO (2 CARDS) */}
             <div className="grid grid-cols-2 gap-3">
-              <div
+              {/* Copilot 75% Pace Card */}
+              <button
+                type="button"
                 onClick={() => setActiveTab("guard")}
-                className="rounded-[24px] p-3.5 border border-white/10 bg-[#131722] space-y-2 cursor-pointer"
+                className={`text-left rounded-2xl border p-4 space-y-2.5 transition cursor-pointer ${
+                  isLight
+                    ? "bg-white border-slate-200 hover:border-slate-300"
+                    : "bg-[#12151E] border-white/[0.08] hover:border-white/15"
+                }`}
               >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-medium">75% Pace</span>
-                  <span className="text-rose-400 font-mono-code font-bold">
-                    {atRiskCount} At Risk
+                <div className="flex items-center justify-between">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  <span className="font-mono-code text-xs font-semibold text-emerald-500">
+                    {safeCoursesCount}/{courses.length} Safe
                   </span>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="font-mono-code font-semibold">
-                      COS 201
-                    </span>
-                    <span className="font-mono-code text-rose-400">
-                      {computeAttendanceStatus(courses[0]).percentage}%
-                    </span>
+                <div>
+                  <div className="text-lg font-bold tracking-tight">
+                    75% Guard
                   </div>
-                  <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden relative">
-                    <div
-                      className="h-full bg-rose-500 rounded-full"
-                      style={{
-                        width: `${computeAttendanceStatus(courses[0]).percentage}%`,
-                      }}
-                    />
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-white"
-                      style={{ left: "75%" }}
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Tap for all courses →
+                  <p
+                    className={`text-xs ${
+                      isLight ? "text-slate-500" : "text-slate-400"
+                    }`}
+                  >
+                    View course pace bars
                   </p>
                 </div>
-              </div>
+              </button>
 
-              <div
+              {/* Jomo XP & Unlocks Card */}
+              <button
+                type="button"
                 onClick={() => setActiveTab("rewards")}
-                className="rounded-[24px] p-3.5 border border-white/10 bg-[#131722] space-y-2 cursor-pointer"
+                className={`text-left rounded-2xl border p-4 space-y-2.5 transition cursor-pointer ${
+                  isLight
+                    ? "bg-white border-slate-200 hover:border-slate-300"
+                    : "bg-[#12151E] border-white/[0.08] hover:border-white/15"
+                }`}
               >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400 font-medium">Jomo Perk</span>
-                  <span className="text-emerald-300 font-mono-code font-bold">
-                    {xpPoints >= 150 ? "Ready" : "Locked"}
+                <div className="flex items-center justify-between">
+                  <Unlock className="w-4 h-4 text-[#3B82F6]" />
+                  <span className="font-mono-code text-xs font-semibold text-[#3B82F6]">
+                    Level {level}
                   </span>
                 </div>
-                <p className="text-xs font-bold text-white leading-snug">
-                  🔓 2h Gaming &amp; Netflix Pass
-                </p>
-                <span className="inline-block text-[11px] font-mono-code text-emerald-300">
-                  150 XP · Tap to unlock →
-                </span>
-              </div>
+                <div>
+                  <div className="text-lg font-bold tracking-tight font-mono-code">
+                    {xpPoints} XP
+                  </div>
+                  <div
+                    className={`h-1.5 w-full rounded-full mt-1.5 overflow-hidden ${
+                      isLight ? "bg-slate-100" : "bg-white/[0.08]"
+                    }`}
+                  >
+                    <div
+                      className="h-full bg-[#3B82F6] rounded-full"
+                      style={{ width: `${levelProgressPct}%` }}
+                    />
+                  </div>
+                </div>
+              </button>
             </div>
 
-            {/* 4. EARLY BIRD TASKS (+60 XP) */}
-            <div className="rounded-[26px] p-4 border border-white/10 bg-[#131722] space-y-3">
+            {/* 4. PRIORITY TASKS (EARLY COMPLETION = +60 XP) */}
+            <div
+              className={`rounded-2xl border p-4 space-y-3 ${
+                isLight
+                  ? "bg-white border-slate-200"
+                  : "bg-[#12151E] border-white/[0.08]"
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-white">
-                  Execution Queue
+                <h2 className="text-sm font-bold tracking-tight">
+                  Priority Tasks
                 </h2>
-                <span className="text-[11px] font-mono-code text-emerald-300">
-                  Early = +60 XP
+                <span className="text-xs font-mono-code text-[#3B82F6] font-medium">
+                  Early +60 XP
                 </span>
               </div>
 
-              <div className="space-y-2.5">
+              <div className="divide-y divide-current/5">
                 {tasks.slice(0, 4).map((t) => (
-                  <div
+                  <button
                     key={t.id}
+                    type="button"
                     onClick={() => {
                       if (t.status !== "done") {
                         addXp(60);
-                        showNotice("⚡ +60 XP Early Bird Task Bonus!");
+                        showNotice("Early Task Bonus (+60 XP)");
                       }
                       setTasks((prev) =>
                         prev.map((item) =>
@@ -616,27 +736,38 @@ export default function DysAIMobileApp() {
                         )
                       );
                     }}
-                    className="flex items-start gap-2.5 text-xs cursor-pointer"
+                    className="w-full py-3 flex items-start gap-3 text-left cursor-pointer"
                   >
-                    <span
-                      className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                        t.status === "done"
-                          ? "bg-emerald-400 border-emerald-400 text-[#090B10]"
-                          : "border-white/30"
-                      }`}
-                    >
-                      {t.status === "done" && <Check className="w-2.5 h-2.5" />}
-                    </span>
-                    <span
-                      className={
-                        t.status === "done"
-                          ? "line-through text-slate-500"
-                          : "font-medium text-slate-100"
-                      }
-                    >
-                      {t.title}
-                    </span>
-                  </div>
+                    {t.status === "done" ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle
+                        className={`w-4 h-4 shrink-0 mt-0.5 ${
+                          isLight ? "text-slate-400" : "text-slate-500"
+                        }`}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-xs font-semibold leading-snug ${
+                          t.status === "done" ? "line-through opacity-45" : ""
+                        }`}
+                      >
+                        {t.title}
+                      </p>
+                      {t.courseCode && (
+                        <span
+                          className={`inline-block mt-1 text-[10px] font-mono-code px-2 py-0.5 rounded-md ${
+                            isLight
+                              ? "bg-slate-100 text-slate-700"
+                              : "bg-white/[0.06] text-slate-300"
+                          }`}
+                        >
+                          {t.courseCode}
+                        </span>
+                      )}
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -646,13 +777,29 @@ export default function DysAIMobileApp() {
         {/* TAB 2: TIMELINE WITH LIVE TIME LINE & PASSED EVENTS GREYED OUT */}
         {activeTab === "timeline" && (
           <div className="space-y-3">
-            <h2 className="text-base font-bold text-white">
-              Today&apos;s Synced Timeline
-            </h2>
+            <div className="flex items-center justify-between">
+              <h1 className="text-lg font-bold tracking-tight">
+                Today&apos;s Schedule
+              </h1>
+              <span
+                className={`text-xs font-mono-code ${
+                  isLight ? "text-slate-500" : "text-slate-400"
+                }`}
+              >
+                {todayEvents.length} blocks
+              </span>
+            </div>
+
             {todayEvents.length === 0 ? (
-              <p className="text-xs text-slate-400 py-8 text-center">
-                No events found for today.
-              </p>
+              <div
+                className={`rounded-2xl border p-8 text-center text-xs ${
+                  isLight
+                    ? "bg-white border-slate-200 text-slate-500"
+                    : "bg-[#12151E] border-white/[0.08] text-slate-400"
+                }`}
+              >
+                No events scheduled for today.
+              </div>
             ) : (
               todayEvents.map((ev, idx) => {
                 const start = new Date(ev.startIso);
@@ -672,29 +819,33 @@ export default function DysAIMobileApp() {
                   <React.Fragment key={ev.id}>
                     {showLineBefore && (
                       <div className="flex items-center gap-2 py-1">
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-400 text-[#090B10] font-mono-code text-[10px] font-bold">
-                          NOW ·{" "}
+                        <span className="px-2 py-0.5 rounded-md bg-[#3B82F6] text-white font-mono-code text-[10px] font-semibold">
                           {new Date(nowMs).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                             hour12: false,
                           })}
                         </span>
-                        <div className="flex-1 h-[1.5px] bg-emerald-400" />
+                        <div className="flex-1 h-[1.5px] bg-[#3B82F6]" />
                       </div>
                     )}
 
                     <div
-                      className={`rounded-[22px] border p-3.5 space-y-2 transition ${
+                      className={`rounded-2xl border p-4 space-y-2.5 transition ${
                         isPassed
-                          ? "border-white/[0.05] bg-white/[0.02] opacity-40"
+                          ? isLight
+                            ? "bg-slate-100/70 border-slate-200/60 opacity-50"
+                            : "bg-white/[0.02] border-white/[0.04] opacity-45"
                           : isActive
-                            ? "border-emerald-400/50 bg-emerald-400/10"
-                            : "border-white/10 bg-[#131722]"
+                            ? "border-[#3B82F6] bg-[#3B82F6]/[0.07]"
+                            : isLight
+                              ? "bg-white border-slate-200"
+                              : "bg-[#12151E] border-white/[0.08]"
                       }`}
                     >
-                      <div className="flex items-center justify-between text-[11px] font-mono-code text-slate-400">
-                        <span>
+                      <div className="flex items-center justify-between text-xs font-mono-code">
+                        <span className="flex items-center gap-1.5 opacity-70">
+                          <Clock className="w-3.5 h-3.5" />
                           {start.toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -706,17 +857,17 @@ export default function DysAIMobileApp() {
                           })}
                         </span>
                         {isActive && (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-400 text-[#090B10] text-[10px] font-bold">
-                            LIVE NOW
+                          <span className="px-2 py-0.5 rounded-md bg-[#3B82F6] text-white text-[10px] font-semibold">
+                            Live Now
                           </span>
                         )}
                         {isPassed && (
-                          <span className="uppercase text-[10px]">Passed</span>
+                          <span className="text-[10px] opacity-60">Passed</span>
                         )}
                       </div>
 
                       <p
-                        className={`text-sm font-bold text-white ${
+                        className={`text-sm font-bold ${
                           isPassed ? "line-through" : ""
                         }`}
                       >
@@ -724,10 +875,10 @@ export default function DysAIMobileApp() {
                       </p>
 
                       <div className="flex items-center justify-between pt-1">
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <span className="text-xs opacity-65 flex items-center gap-1">
                           {ev.location && (
                             <>
-                              <MapPin className="w-3 h-3" />
+                              <MapPin className="w-3.5 h-3.5" />
                               {ev.location}
                             </>
                           )}
@@ -736,12 +887,14 @@ export default function DysAIMobileApp() {
                         {ev.type === "class" && (
                           <div className="flex items-center gap-1.5">
                             {ev.attendanceMarked === "present" ? (
-                              <span className="text-xs font-bold text-emerald-300">
-                                ✓ In Class (+50)
+                              <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
+                                <Check className="w-3.5 h-3.5" />
+                                In Class (+50)
                               </span>
                             ) : ev.attendanceMarked === "cancelled" ? (
-                              <span className="text-xs font-bold text-amber-300">
-                                ⊘ Cancelled
+                              <span className="text-xs font-semibold text-amber-500 flex items-center gap-1">
+                                <Ban className="w-3.5 h-3.5" />
+                                Cancelled
                               </span>
                             ) : (
                               <>
@@ -750,16 +903,20 @@ export default function DysAIMobileApp() {
                                     onClick={() =>
                                       handleClassOutcome(ev, "present")
                                     }
-                                    className="px-2.5 py-1 rounded-xl bg-emerald-400 text-[#090B10] text-xs font-bold cursor-pointer"
+                                    className="min-h-[34px] px-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold cursor-pointer"
                                   >
-                                    Check-In ✓
+                                    Check-In
                                   </button>
                                 )}
                                 <button
                                   onClick={() =>
                                     handleClassOutcome(ev, "cancelled")
                                   }
-                                  className="px-2.5 py-1 rounded-xl border border-white/15 text-xs text-slate-300 cursor-pointer"
+                                  className={`min-h-[34px] px-2.5 rounded-xl border text-xs font-medium cursor-pointer ${
+                                    isLight
+                                      ? "border-slate-200 bg-slate-50"
+                                      : "border-white/10 bg-white/5"
+                                  }`}
                                 >
                                   Cancelled
                                 </button>
@@ -771,8 +928,8 @@ export default function DysAIMobileApp() {
                         {ev.type === "study" && (
                           <>
                             {ev.studyCompleted ? (
-                              <span className="text-xs font-bold text-violet-300">
-                                ✓ +40 XP
+                              <span className="text-xs font-semibold text-[#3B82F6]">
+                                Completed (+40 XP)
                               </span>
                             ) : (
                               <button
@@ -785,11 +942,11 @@ export default function DysAIMobileApp() {
                                     )
                                   );
                                   addXp(40);
-                                  showNotice("⚡ +40 XP Study Block Completed!");
+                                  showNotice("Study Block Completed (+40 XP)");
                                 }}
-                                className="px-2.5 py-1 rounded-xl bg-violet-500 text-white text-xs font-bold cursor-pointer"
+                                className="min-h-[34px] px-3 rounded-xl bg-[#3B82F6] text-white text-xs font-semibold cursor-pointer"
                               >
-                                +40 XP ✓
+                                Complete (+40 XP)
                               </button>
                             )}
                           </>
@@ -807,13 +964,18 @@ export default function DysAIMobileApp() {
         {activeTab === "guard" && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white">
+              <h1 className="text-lg font-bold tracking-tight">
                 75% Attendance Pace
-              </h2>
-              <span className="text-xs font-mono-code text-slate-400">
-                White marker = 75%
+              </h1>
+              <span
+                className={`text-xs font-mono-code ${
+                  isLight ? "text-slate-500" : "text-slate-400"
+                }`}
+              >
+                Marker = 75%
               </span>
             </div>
+
             {courses.map((course) => {
               const {
                 percentage: pct,
@@ -824,41 +986,59 @@ export default function DysAIMobileApp() {
               return (
                 <div
                   key={course.code}
-                  className={`rounded-[24px] border p-4 space-y-2.5 bg-[#131722] ${
-                    isAtRisk ? "border-rose-500/35" : "border-white/10"
+                  className={`rounded-2xl border p-4 space-y-3 ${
+                    isLight
+                      ? "bg-white border-slate-200"
+                      : "bg-[#12151E] border-white/[0.08]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-mono-code text-xs font-bold text-white">
+                      <span className="font-mono-code text-xs font-bold">
                         {course.code}
                       </span>
-                      <p className="text-xs text-slate-400">{course.title}</p>
+                      <p
+                        className={`text-xs ${
+                          isLight ? "text-slate-500" : "text-slate-400"
+                        }`}
+                      >
+                        {course.title}
+                      </p>
                     </div>
                     <div className="text-right font-mono-code">
                       <span
                         className={`text-sm font-bold ${
-                          isAtRisk ? "text-rose-400" : "text-emerald-400"
+                          isAtRisk ? "text-rose-500" : "text-emerald-500"
                         }`}
                       >
                         {pct}%
                       </span>
-                      <p className="text-[10px] text-slate-500">
+                      <p
+                        className={`text-[10px] ${
+                          isLight ? "text-slate-400" : "text-slate-500"
+                        }`}
+                      >
                         {course.attendedClasses}/{course.totalClassesHeld}
                       </p>
                     </div>
                   </div>
 
-                  {/* Copilot Horizontal Pace Bar with 75% Vertical Marker */}
-                  <div className="h-2.5 w-full rounded-full bg-white/10 overflow-hidden relative">
+                  {/* Copilot Horizontal Pace Bar with 75% Tick */}
+                  <div
+                    className={`h-2 w-full rounded-full overflow-hidden relative ${
+                      isLight ? "bg-slate-100" : "bg-white/10"
+                    }`}
+                  >
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        isAtRisk ? "bg-rose-500" : "bg-emerald-400"
+                      className={`h-full rounded-full transition-all duration-200 ${
+                        isAtRisk ? "bg-rose-500" : "bg-emerald-500"
                       }`}
                       style={{ width: `${Math.min(100, pct)}%` }}
                     />
                     <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-white"
+                      className={`absolute top-0 bottom-0 w-0.5 ${
+                        isLight ? "bg-slate-900" : "bg-white"
+                      }`}
                       style={{ left: "75%" }}
                     />
                   </div>
@@ -867,13 +1047,13 @@ export default function DysAIMobileApp() {
                     <span
                       className={
                         isAtRisk
-                          ? "text-rose-300 font-medium"
-                          : "text-emerald-300 font-medium"
+                          ? "text-rose-500 font-medium"
+                          : "text-emerald-500 font-medium"
                       }
                     >
                       {isAtRisk
-                        ? `Below 75% — attend next ${classesNeededToRecover}`
-                        : `Ahead of pace — ${safeSkipsAvailable} safe skips`}
+                        ? `Attend next ${classesNeededToRecover} to hit 75%`
+                        : `${safeSkipsAvailable} safe skips available`}
                     </span>
                     <div className="flex gap-1.5">
                       <button
@@ -891,9 +1071,14 @@ export default function DysAIMobileApp() {
                           );
                           addXp(50);
                         }}
-                        className="p-1.5 rounded-lg bg-white/5 border border-white/10"
+                        aria-label="Log attended class"
+                        className={`h-8 w-8 rounded-lg border flex items-center justify-center cursor-pointer ${
+                          isLight
+                            ? "border-slate-200 bg-slate-50"
+                            : "border-white/10 bg-white/5"
+                        }`}
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => {
@@ -908,9 +1093,14 @@ export default function DysAIMobileApp() {
                             )
                           );
                         }}
-                        className="p-1.5 rounded-lg bg-white/5 border border-white/10"
+                        aria-label="Log missed class"
+                        className={`h-8 w-8 rounded-lg border flex items-center justify-center cursor-pointer ${
+                          isLight
+                            ? "border-slate-200 bg-slate-50"
+                            : "border-white/10 bg-white/5"
+                        }`}
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -923,109 +1113,146 @@ export default function DysAIMobileApp() {
         {/* TAB 4: JOMO-STYLE REWARD UNLOCKS VAULT */}
         {activeTab === "rewards" && (
           <div className="space-y-3">
-            <div className="rounded-[26px] border border-emerald-400/35 bg-emerald-400/10 p-4 space-y-1">
-              <span className="font-mono-code text-[10px] uppercase tracking-wider text-emerald-300 font-bold">
-                Jomo Strict Mode Unlocks
-              </span>
-              <div className="text-2xl font-bold font-mono-code text-white">
-                {xpPoints} XP · Level {Math.floor(xpPoints / 150) + 1}
+            <div className="rounded-2xl bg-[#3B82F6] text-white p-5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold opacity-90">
+                  Level {level} Execution Score
+                </span>
+                <Award className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-300">
+              <div className="text-3xl font-bold font-mono-code tracking-tight">
+                {xpPoints} XP
+              </div>
+              <p className="text-xs opacity-90">
                 Class Check-In +50 XP · Study Block +40 XP · Early Task +60 XP
               </p>
             </div>
 
             {[
               {
-                title: "🔓 2h Guilt-Free Gaming / Netflix Pass",
+                title: "2h Guilt-Free Gaming / Netflix Pass",
                 cost: 150,
                 desc: "Unlocks distraction shield for a 2-hour evening chill window",
               },
               {
-                title: "⚡ AI High-Yield Exam Cheat Sheet",
+                title: "AI High-Yield Exam Cheat Sheet",
                 cost: 250,
                 desc: "Instant predicted lecturer quiz & 1-page cram sheet",
               },
               {
-                title: "🌯 Takeout / Shawarma Milestone Treat",
+                title: "Takeout / Shawarma Milestone Treat",
                 cost: 400,
                 desc: "Reward for hitting your class + study streak",
               },
               {
-                title: "🛡️ Safe-Skip Shield Token (80%+ Buffer)",
+                title: "Safe-Skip Shield Token (80%+ Buffer)",
                 cost: 500,
                 desc: "Cash in 1 guilt-free skip on SEN 201 or BU COS 209",
               },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="rounded-[22px] border border-white/10 bg-[#131722] p-4 flex items-center justify-between gap-3"
-              >
-                <div className="text-xs space-y-1">
-                  <p className="font-bold text-white">{item.title}</p>
-                  <p className="text-slate-400">{item.desc}</p>
-                </div>
-                <button
-                  disabled={xpPoints < item.cost}
-                  onClick={() => {
-                    addXp(-item.cost);
-                    showNotice(`Unlocked: ${item.title}!`);
-                  }}
-                  className="shrink-0 px-3.5 py-2 rounded-xl bg-emerald-400 disabled:opacity-30 text-[#090B10] text-xs font-bold cursor-pointer"
+            ].map((item, idx) => {
+              const unlocked = xpPoints >= item.cost;
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-2xl border p-4 flex items-center justify-between gap-3 ${
+                    isLight
+                      ? "bg-white border-slate-200"
+                      : "bg-[#12151E] border-white/[0.08]"
+                  }`}
                 >
-                  {item.cost} XP
-                </button>
-              </div>
-            ))}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      {unlocked ? (
+                        <Unlock className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      ) : (
+                        <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      )}
+                      <p className="text-xs font-bold">{item.title}</p>
+                    </div>
+                    <p
+                      className={`text-xs ${
+                        isLight ? "text-slate-500" : "text-slate-400"
+                      }`}
+                    >
+                      {item.desc}
+                    </p>
+                  </div>
+                  <button
+                    disabled={!unlocked}
+                    onClick={() => {
+                      addXp(-item.cost);
+                      showNotice(`Unlocked: ${item.title}`);
+                    }}
+                    className="shrink-0 min-h-[38px] px-3.5 rounded-xl bg-[#3B82F6] disabled:opacity-30 text-white text-xs font-semibold transition cursor-pointer"
+                  >
+                    {item.cost} XP
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
 
-      {/* FLOATING GLASS BOTTOM DOCK (COPILOT × JOMO STYLE) */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 pb-4 pt-2 bg-gradient-to-t from-[#0B0D13] via-[#0B0D13]/95 to-transparent">
-        <div className="rounded-[24px] p-1.5 border border-white/12 bg-[#161B28]/95 backdrop-blur-xl grid grid-cols-4 gap-1 text-center text-xs font-semibold shadow-2xl">
+      {/* FLOATING BOTTOM NAVIGATION BAR (UIUX-DESIGNER RULE: TOP-4/BOTTOM-4 SPACING, 44PX TARGETS, SVG ICONS) */}
+      <nav className="fixed bottom-4 left-4 right-4 max-w-[398px] mx-auto z-40">
+        <div
+          className={`rounded-2xl p-1.5 border backdrop-blur-xl grid grid-cols-4 gap-1 shadow-xl ${
+            isLight
+              ? "bg-white/95 border-slate-200/90"
+              : "bg-[#12151E]/95 border-white/[0.08]"
+          }`}
+        >
           <button
             onClick={() => setActiveTab("dump")}
-            className={`py-2.5 rounded-[18px] flex items-center justify-center gap-1 cursor-pointer transition ${
+            className={`min-h-[44px] rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition cursor-pointer ${
               activeTab === "dump"
-                ? "bg-emerald-400 text-[#090B10] font-bold"
-                : "text-slate-400"
+                ? "bg-[#3B82F6] text-white"
+                : isLight
+                  ? "text-slate-500 hover:text-slate-900"
+                  : "text-slate-400 hover:text-white"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-4 h-4" strokeWidth={2} />
             <span>Dump</span>
           </button>
           <button
             onClick={() => setActiveTab("timeline")}
-            className={`py-2.5 rounded-[18px] flex items-center justify-center gap-1 cursor-pointer transition ${
+            className={`min-h-[44px] rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition cursor-pointer ${
               activeTab === "timeline"
-                ? "bg-emerald-400 text-[#090B10] font-bold"
-                : "text-slate-400"
+                ? "bg-[#3B82F6] text-white"
+                : isLight
+                  ? "text-slate-500 hover:text-slate-900"
+                  : "text-slate-400 hover:text-white"
             }`}
           >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Timeline</span>
+            <Calendar className="w-4 h-4" strokeWidth={2} />
+            <span>Schedule</span>
           </button>
           <button
             onClick={() => setActiveTab("guard")}
-            className={`py-2.5 rounded-[18px] flex items-center justify-center gap-1 cursor-pointer transition ${
+            className={`min-h-[44px] rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition cursor-pointer ${
               activeTab === "guard"
-                ? "bg-emerald-400 text-[#090B10] font-bold"
-                : "text-slate-400"
+                ? "bg-[#3B82F6] text-white"
+                : isLight
+                  ? "text-slate-500 hover:text-slate-900"
+                  : "text-slate-400 hover:text-white"
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5" />
+            <ShieldCheck className="w-4 h-4" strokeWidth={2} />
             <span>75% Pace</span>
           </button>
           <button
             onClick={() => setActiveTab("rewards")}
-            className={`py-2.5 rounded-[18px] flex items-center justify-center gap-1 cursor-pointer transition ${
+            className={`min-h-[44px] rounded-xl flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition cursor-pointer ${
               activeTab === "rewards"
-                ? "bg-emerald-400 text-[#090B10] font-bold"
-                : "text-slate-400"
+                ? "bg-[#3B82F6] text-white"
+                : isLight
+                  ? "text-slate-500 hover:text-slate-900"
+                  : "text-slate-400 hover:text-white"
             }`}
           >
-            <Award className="w-3.5 h-3.5" />
+            <Award className="w-4 h-4" strokeWidth={2} />
             <span>Unlocks</span>
           </button>
         </div>
