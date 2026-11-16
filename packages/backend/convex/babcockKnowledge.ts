@@ -8,6 +8,7 @@ export interface ConvexCourseIntel {
   teachingStyle?: string;
   testPattern?: string;
   recommendedTextbooks?: string;
+  syllabusModules?: string[];
 }
 
 export const BABCOCK_UNIVERSITY_HANDBOOK_RULES = `
@@ -59,6 +60,11 @@ export function formatCourseIntelligenceForPrompt(
         attendanceSummary = `SAFE (${pct}%: ${c.attendedClasses}/${c.totalClassesHeld} — ${safeSkips} safe skip(s) left)`;
       }
 
+      const syllabusText =
+        c.syllabusModules && c.syllabusModules.length > 0
+          ? c.syllabusModules.map((m) => `    * ${m}`).join("\n")
+          : "    * Not specified";
+
       return [
         `- ${c.code}: ${c.title}`,
         `  Attendance: ${attendanceSummary}`,
@@ -66,6 +72,7 @@ export function formatCourseIntelligenceForPrompt(
         `  Teaching Style: ${c.teachingStyle || "Not specified"}`,
         `  Test / Quiz Pattern: ${c.testPattern || "Not specified"}`,
         `  Recommended Textbooks: ${c.recommendedTextbooks || "Standard university texts"}`,
+        `  Official Syllabus Modules:\n${syllabusText}`,
       ].join("\n");
     })
     .join("\n");

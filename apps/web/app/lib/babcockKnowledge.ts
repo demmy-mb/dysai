@@ -8,6 +8,7 @@ export interface CourseProfile {
   teachingStyle?: string;
   testPattern?: string;
   recommendedTextbooks?: string;
+  syllabusModules?: string[];
 }
 
 export const BABCOCK_UNIVERSITY_HANDBOOK_RULES = `
@@ -58,34 +59,15 @@ export const DEFAULT_BABCOCK_COURSES: CourseProfile[] = [
       "Often drops 10-mark surprise lab quizzes right after finishing control structures, arrays, or functions; mid-semester includes trace-the-output questions.",
     recommendedTextbooks:
       "Deitel & Deitel — How to Program (C++/Java/Python), plus New Horizon Practical Lab Manual",
-  },
-  {
-    code: "SEN 201",
-    title: "Software Engineering Principles",
-    attendedClasses: 14,
-    totalClassesHeld: 16, // 88% -> Safe
-    targetAttendanceRatio: 0.75,
-    lecturerName: "Dr. Ogunleye (SEN 201)",
-    teachingStyle:
-      "Scenario-driven lectures comparing SDLC models (Agile vs. Waterfall vs. Spiral), requirements elicitation, and UML modeling.",
-    testPattern:
-      "Mid-semester tests heavily feature case-study essays and drawing UML Use Case, Class, or Sequence diagrams; marks terminology precision strictly.",
-    recommendedTextbooks:
-      "Ian Sommerville — Software Engineering (10th Ed.), Roger S. Pressman — Software Engineering: A Practitioner's Approach",
-  },
-  {
-    code: "CSC 203",
-    title: "Discrete Structures",
-    attendedClasses: 13,
-    totalClassesHeld: 16, // 81% -> Safe
-    targetAttendanceRatio: 0.75,
-    lecturerName: "Prof. Mensah (CSC 203)",
-    teachingStyle:
-      "Strict on step-by-step formal mathematical proofs, base cases in Mathematical Induction, truth tables, and recurrence relations.",
-    testPattern:
-      "Known for unannounced 15-minute desk quizzes at the start of Thursday lectures immediately after covering a new proof technique.",
-    recommendedTextbooks:
-      "Kenneth H. Rosen — Discrete Mathematics and Its Applications (8th Ed.), Susanna S. Epp — Discrete Mathematics with Applications",
+    syllabusModules: [
+      "Module 1: Programming Paradigms (Structured, Functional, Logic & OOP)",
+      "Module 2: Syntax, Data Types, Variables, Expressions & Operators",
+      "Module 3: Control Structures (Selection if/switch & Iteration for/while/do-while)",
+      "Module 4: Functions, Parameter Passing (Pass-by-Value vs Reference) & Recursion",
+      "Module 5: Arrays, Strings, Pointers & Memory Organisation",
+      "Module 6: Object-Oriented Foundations (Classes, Objects, Encapsulation & Inheritance)",
+      "Module 7: Standard APIs (Lists, Stacks, Queues, Iterators), Searching/Sorting & Exception Handling",
+    ],
   },
   {
     code: "IFT 211",
@@ -100,6 +82,36 @@ export const DEFAULT_BABCOCK_COURSES: CourseProfile[] = [
       "Tests 4-variable Karnaugh Map simplifications (especially don't-care conditions) and JK/D Flip-Flop excitation tables right after module wrap-up.",
     recommendedTextbooks:
       "M. Morris Mano — Digital Design (5th/6th Ed.), Thomas L. Floyd — Digital Fundamentals",
+    syllabusModules: [
+      "Module 1: Number Systems (Binary, Octal, Hex, 1's/2's Complement) & Codes (BCD, Gray, ASCII)",
+      "Module 2: Boolean Algebra Postulates, De Morgan's Theorems & Logic Gates (AND, OR, NOT, NAND, NOR, XOR, XNOR)",
+      "Module 3: Canonical Forms (SOP, POS, Minterms, Maxterms) & Karnaugh Map (K-Map) Minimization (up to 4 variables + Don't-Care conditions)",
+      "Module 4: Combinational Logic Circuits (Half/Full Adders, Subtractors, Comparators, Decoders, Encoders, Multiplexers & Demultiplexers)",
+      "Module 5: Sequential Logic Fundamentals (SR, D, JK & T Latches and Edge-Triggered Flip-Flops, Characteristic & Excitation Tables)",
+      "Module 6: Registers, Shift Registers & Synchronous/Asynchronous Ripple Counters",
+    ],
+  },
+  {
+    code: "CSC 203",
+    title: "Discrete Structures",
+    attendedClasses: 13,
+    totalClassesHeld: 16, // 81% -> Safe
+    targetAttendanceRatio: 0.75,
+    lecturerName: "Prof. Mensah (CSC 203)",
+    teachingStyle:
+      "Strict on step-by-step formal mathematical proofs, base cases in Mathematical Induction, truth tables, and recurrence relations.",
+    testPattern:
+      "Known for unannounced 15-minute desk quizzes at the start of Thursday lectures immediately after covering a new proof technique.",
+    recommendedTextbooks:
+      "Kenneth H. Rosen — Discrete Mathematics and Its Applications (8th Ed.), Susanna S. Epp — Discrete Mathematics with Applications",
+    syllabusModules: [
+      "Module 1: Set Theory, Power Sets, Cartesian Products, Relations (Equivalence & Partial Orderings) & Functions (Bijective, Inverse, Composition)",
+      "Module 2: Propositional Logic, Truth Tables, Logical Equivalence & Normal Forms (DNF / CNF)",
+      "Module 3: Predicate Logic, Quantifiers & Rules of Inference",
+      "Module 4: Methods of Proof (Direct Proof, Contraposition, Contradiction & Weak/Strong Mathematical Induction)",
+      "Module 5: Combinatorics (Permutations, Combinations, Pigeonhole Principle) & Recurrence Relations",
+      "Module 6: Graph Theory (Directed/Undirected Graphs, Euler/Hamilton Paths, Trees & Spanning Trees)",
+    ],
   },
   {
     code: "BU COS 209",
@@ -114,6 +126,92 @@ export const DEFAULT_BABCOCK_COURSES: CourseProfile[] = [
       "Continuous milestone evaluations instead of traditional paper quizzes; expects live demos, commit history checks, and architecture defense.",
     recommendedTextbooks:
       "Robert C. Martin — Clean Code, Babcock Computing Studio III Project Guide",
+    syllabusModules: [
+      "Module 1: Git Version Control, Branching Strategies & Collaborative Code Review",
+      "Module 2: Full-Stack System Architecture, API Contracts & Database Schema Modeling",
+      "Module 3: Clean Code Principles, Refactoring, Automated Testing & Sprint Delivery Defense",
+    ],
+  },
+  {
+    code: "SEN 201",
+    title: "Introduction to Software Engineering",
+    attendedClasses: 14,
+    totalClassesHeld: 16, // 88% -> Safe
+    targetAttendanceRatio: 0.75,
+    lecturerName: "Dr. Ogunleye (SEN 201)",
+    teachingStyle:
+      "Scenario-driven lectures comparing SDLC models (Agile vs. Waterfall vs. Spiral), requirements elicitation, and UML modeling.",
+    testPattern:
+      "Mid-semester tests heavily feature case-study essays and drawing UML Use Case, Class, or Sequence diagrams; marks terminology precision strictly.",
+    recommendedTextbooks:
+      "Ian Sommerville — Software Engineering (10th Ed.), Roger S. Pressman — Software Engineering: A Practitioner's Approach",
+    syllabusModules: [
+      "Module 1: Evolution of Software Engineering, Software Crisis & Professional Ethics",
+      "Module 2: Software Development Life Cycle (SDLC) & Process Models (Waterfall, Agile/Scrum, Incremental, Spiral)",
+      "Module 3: Requirements Engineering (Functional vs Non-Functional, Elicitation, Analysis & SRS Specification)",
+      "Module 4: System Modeling & UML Diagrams (Use Case, Class, Sequence, Activity & State Charts)",
+      "Module 5: Software Design & Architectural Patterns (Modularity, Coupling/Cohesion, Layered, MVC, Client-Server)",
+      "Module 6: Software Verification & Validation (Unit, Integration, System & Acceptance Testing) & QA Metrics",
+      "Module 7: Software Evolution, Maintenance Types, Re-engineering & Configuration Management",
+    ],
+  },
+  {
+    code: "ENT 211",
+    title: "Entrepreneurship & Innovation",
+    attendedClasses: 10,
+    totalClassesHeld: 12, // 83% -> Safe
+    targetAttendanceRatio: 0.75,
+    lecturerName: "Dr. Nwosu (ENT 211)",
+    teachingStyle:
+      "Case-study discussions on Nigerian startups, value creation, business models, and venture registration.",
+    testPattern:
+      "Combines MCQ objective tests on entrepreneurship theories with a group Business Plan / Pitch Deck CA deliverable.",
+    recommendedTextbooks:
+      "Hisrich, Peters & Shepherd — Entrepreneurship, Babcock ENT 211 Study Manual",
+    syllabusModules: [
+      "Module 1: Theories of Entrepreneurship (Schumpeterian Creative Destruction, Intrapreneurship & Opportunity Discovery)",
+      "Module 2: Innovation Drivers, Design Thinking & Value Proposition Canvas",
+      "Module 3: Business Model Generation, Nigerian Corporate Registration (CAC), IP Rights & Venture Financing",
+    ],
+  },
+  {
+    code: "MTH 201",
+    title: "Mathematical Methods I",
+    attendedClasses: 11,
+    totalClassesHeld: 13, // 85% -> Safe
+    targetAttendanceRatio: 0.75,
+    lecturerName: "Dr. Adeleke (MTH 201)",
+    teachingStyle:
+      "Worked board derivations with heavy emphasis on showing intermediate steps in Taylor expansions, partial derivatives, and multiple integrals.",
+    testPattern:
+      "Frequently gives 2-question in-class problem quizzes after completing Taylor Series and Lagrange Multipliers.",
+    recommendedTextbooks:
+      "Murray R. Spiegel — Schaum's Outline of Advanced Calculus, Erwin Kreyszig — Advanced Engineering Mathematics",
+    syllabusModules: [
+      "Module 1: Real-Valued Functions, Rolle's Theorem, Mean Value Theorem & Taylor/Maclaurin Series",
+      "Module 2: Multivariable Calculus, Partial Derivatives, Chain Rule, Total Differentials & Jacobians",
+      "Module 3: Maxima, Minima & Lagrange Multipliers for Constrained Optimization",
+      "Module 4: Multiple Integrals (Double/Triple) & Line/Surface Integrals",
+    ],
+  },
+  {
+    code: "GEDS",
+    title: "Adventist Heritage & Agriculture",
+    attendedClasses: 12,
+    totalClassesHeld: 14, // 86% -> Safe
+    targetAttendanceRatio: 0.75,
+    lecturerName: "Babcock GEDS Directorate",
+    teachingStyle:
+      "Lecture + devotional reflections on Seventh-day Adventist history, Babcock heritage, and foundational agricultural sustainability.",
+    testPattern:
+      "Objective CBT/MCQ mid-semester quizzes covering key historical dates, pioneers, and core practical concepts.",
+    recommendedTextbooks:
+      "George R. Knight — A Brief History of Seventh-day Adventists, Babcock GEDS Course Compendium",
+    syllabusModules: [
+      "Module 1: Origins of the Advent Movement, 1844 Great Disappointment & Founding Pioneers",
+      "Module 2: History of Babcock University (ASWA to Babcock University Charter & Core Values)",
+      "Module 3: Principles of Sustainable Agriculture, Soil Management & Food Security",
+    ],
   },
 ];
 
@@ -163,7 +261,7 @@ export function computeAttendanceStatus(
 }
 
 /**
- * Formats live course attendance, lecturer profiles, and textbooks for Gemini prompts.
+ * Formats live course attendance, lecturer profiles, textbooks, and official syllabus modules for Gemini prompts.
  */
 export function formatCourseIntelligenceForPrompt(
   courses: CourseProfile[]
@@ -179,6 +277,11 @@ export function formatCourseIntelligenceForPrompt(
         ? `AT RISK (${status.percentage}%: ${c.attendedClasses}/${c.totalClassesHeld} attended — MUST attend next ${status.classesNeededToRecover} class(es) consecutively to recover to 75%)`
         : `SAFE (${status.percentage}%: ${c.attendedClasses}/${c.totalClassesHeld} attended — ${status.safeSkipsAvailable} safe skip(s) available)`;
 
+      const syllabusText =
+        c.syllabusModules && c.syllabusModules.length > 0
+          ? c.syllabusModules.map((m) => `    * ${m}`).join("\n")
+          : "    * Not specified";
+
       return [
         `- ${c.code}: ${c.title}`,
         `  Attendance: ${attendanceLine}`,
@@ -186,6 +289,7 @@ export function formatCourseIntelligenceForPrompt(
         `  Teaching Style: ${c.teachingStyle || "Not specified"}`,
         `  Test / Surprise Quiz Pattern: ${c.testPattern || "Not specified"}`,
         `  Recommended Textbooks: ${c.recommendedTextbooks || "Standard university texts"}`,
+        `  Official Babcock / NUC CCMAS Syllabus Modules:\n${syllabusText}`,
       ].join("\n");
     })
     .join("\n");

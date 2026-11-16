@@ -100,6 +100,7 @@ interface BrainDumpReceipt {
 }
 
 interface TutorQuiz {
+  syllabusModule?: string;
   question: string;
   options: string[];
   correctIndex: number;
@@ -111,7 +112,8 @@ interface TutorLesson {
   keyTakeaways: string[];
   textbookGuide: string;
   lecturerExamTip: string;
-  quiz: TutorQuiz;
+  quiz?: TutorQuiz;
+  quizQuestions?: TutorQuiz[];
 }
 
 interface ChatTurn {
@@ -184,12 +186,14 @@ export default function DysAIDashboard() {
   );
   const [customHandbookText, setCustomHandbookText] = useState("");
 
-  // Study Topic Quick-Add state
+  // Study Topic Quick-Add & Official Syllabus Explorer state
   const [showAddTopic, setShowAddTopic] = useState(false);
   const [newTopicCourse, setNewTopicCourse] = useState("IFT 211");
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [newTopicConfidence, setNewTopicConfidence] =
     useState<Confidence>("weak");
+  const [syllabusExplorerCode, setSyllabusExplorerCode] = useState("COS 201");
+  const [showSyllabusExplorer, setShowSyllabusExplorer] = useState(true);
 
   // Interactive AI Teacher & Quiz Modal state
   const [activeTutorTopic, setActiveTutorTopic] = useState<StudyTopic | null>(
@@ -198,9 +202,10 @@ export default function DysAIDashboard() {
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorError, setTutorError] = useState<string | null>(null);
   const [tutorLesson, setTutorLesson] = useState<TutorLesson | null>(null);
-  const [selectedQuizOption, setSelectedQuizOption] = useState<number | null>(
-    null
-  );
+  const [selectedQuizAnswers, setSelectedQuizAnswers] = useState<
+    Record<number, number>
+  >({});
+  const [quizRefreshing, setQuizRefreshing] = useState(false);
   const [tutorChat, setTutorChat] = useState<ChatTurn[]>([]);
   const [tutorFollowUpInput, setTutorFollowUpInput] = useState("");
   const [tutorFollowUpLoading, setTutorFollowUpLoading] = useState(false);
@@ -379,9 +384,37 @@ export default function DysAIDashboard() {
     try {
       const savedCourses = window.localStorage.getItem("dysai_babcock_courses");
       if (savedCourses) {
-        const parsedCourses = JSON.parse(savedCourses);
+        const parsedCourses = JSON.parse(savedCourses) as CourseProfile[];
         if (Array.isArray(parsedCourses) && parsedCourses.length > 0) {
-          setCourses(parsedCourses);
+          const defaultMap = new Map(
+            DEFAULT_BABCOCK_COURSES.map((c) => [c.code.toUpperCase(), c])
+          );
+          const merged = parsedCourses.map((c) => {
+            const def = defaultMap.get(c.code.toUpperCase());
+            if (!def) return c;
+            return {
+              ...def,
+              ...c,
+              lecturerName: c.lecturerName || def.lecturerName,
+              teachingStyle: c.teachingStyle || def.teachingStyle,
+              testPattern: c.testPattern || def.testPattern,
+              recommendedTextbooks:
+                c.recommendedTextbooks || def.recommendedTextbooks,
+              syllabusModules:
+                c.syllabusModules && c.syllabusModules.length > 0
+                  ? c.syllabusModules
+                  : def.syllabusModules,
+            };
+          });
+          const existingCodes = new Set(
+            merged.map((c) => c.code.toUpperCase())
+          );
+          DEFAULT_BABCOCK_COURSES.forEach((def) => {
+            if (!existingCodes.has(def.code.toUpperCase())) {
+              merged.push(def);
+            }
+          });
+          setCourses(merged);
         }
       }
       const savedHandbook = window.localStorage.getItem(
@@ -798,7 +831,7 @@ export default function DysAIDashboard() {
     setTutorLoading(true);
     setTutorError(null);
     setTutorLesson(null);
-    setSelectedQuizOption(null);
+    setSelectedQuizAnswers({});
     setTutorChat([]);
     setTutorFollowUpInput("");
 
@@ -827,6 +860,58 @@ export default function DysAIDashboard() {
       );
     } finally {
       setTutorLoading(false);
+    }
+  };
+
+  const generateFreshSyllabusQuiz = async () => {
+    if (!activeTutorTopic || !tutorLesson || quizRefreshing) return;
+    setQuizRefreshing(true);
+    setTutorError(null);
+
+    const existingQuestions = (
+      tutorLesson.quizQuestions?.length
+        ? tutorLesson.quizQuestions
+        : tutorLesson.quiz
+          ? [tutorLesson.quiz]
+          : []
+    ).map((q) => q.question);
+
+    try {
+      const res = await fetch("/api/tutor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "teach_topic",
+          courseCode: activeTutorTopic.courseCode,
+          topic: activeTutorTopic.topic,
+          confidence: activeTutorTopic.confidence,
+          quizOnly: true,
+          previousQuestions: existingQuestions,
+          courses,
+          customHandbookText,
+          apiKeyOverride: apiKeyOverride.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate fresh syllabus quiz");
+      }
+      setTutorLesson((prev) =>
+        prev
+          ? {
+              ...prev,
+              quizQuestions: data.quizQuestions || [],
+              quiz: data.quiz || data.quizQuestions?.[0],
+            }
+          : prev
+      );
+      setSelectedQuizAnswers({});
+    } catch (err: unknown) {
+      setTutorError(
+        err instanceof Error ? err.message : "Could not refresh syllabus quiz"
+      );
+    } finally {
+      setQuizRefreshing(false);
     }
   };
 
@@ -2219,6 +2304,105 @@ export default function DysAIDashboard() {
                   );
                 })}
               </div>
+
+              {/* Official Babcock / NUC CCMAS Course Syllabus Explorer */}
+              <div
+                className={`rounded-xl border p-3.5 space-y-3 ${
+                  isPaper
+                    ? "border-[#E2DFD5] bg-[#FAF9F5]"
+                    : "border-white/[0.08] bg-white/[0.02]"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5 text-[#EA580C]" />
+                    <span className="text-xs font-semibold">
+                      Official Babcock / CCMAS Course Syllabus
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowSyllabusExplorer(!showSyllabusExplorer)
+                    }
+                    className="text-[11px] font-medium text-[#EA580C] hover:underline cursor-pointer"
+                  >
+                    {showSyllabusExplorer ? "Hide modules" : "Browse syllabus"}
+                  </button>
+                </div>
+
+                {showSyllabusExplorer && (
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      {courses.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setSyllabusExplorerCode(c.code)}
+                          className={`font-mono-code text-[10px] px-2 py-1 rounded-md border transition cursor-pointer ${
+                            syllabusExplorerCode === c.code
+                              ? "border-[#EA580C] bg-[#EA580C] text-white font-semibold"
+                              : isPaper
+                                ? "border-[#DCD9CE] bg-white hover:bg-[#EFECE4]"
+                                : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"
+                          }`}
+                        >
+                          {c.code}
+                        </button>
+                      ))}
+                    </div>
+
+                    {(() => {
+                      const activeCourse =
+                        courses.find((c) => c.code === syllabusExplorerCode) ||
+                        courses[0];
+                      const modules = activeCourse?.syllabusModules || [];
+                      if (!activeCourse) return null;
+
+                      return (
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                          {modules.length === 0 ? (
+                            <p className="text-[11px] opacity-60">
+                              No syllabus modules loaded for {activeCourse.code}{" "}
+                              yet. Upload your syllabus PDF in Babcock Handbook
+                              or edit the course.
+                            </p>
+                          ) : (
+                            modules.map((mod, mIdx) => (
+                              <div
+                                key={mIdx}
+                                className={`flex items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-[11px] ${
+                                  isPaper
+                                    ? "border-[#E6E3D8] bg-white"
+                                    : "border-white/[0.07] bg-black/30"
+                                }`}
+                              >
+                                <span className="leading-snug opacity-85">
+                                  {mod}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openTopicTutor({
+                                      id: `syllabus-${activeCourse.code}-${mIdx}`,
+                                      courseCode: activeCourse.code,
+                                      topic: mod,
+                                      confidence: "review",
+                                    })
+                                  }
+                                  className="shrink-0 px-2 py-1 rounded-md bg-[#EA580C]/10 hover:bg-[#EA580C]/20 text-[#EA580C] font-semibold text-[10px] cursor-pointer"
+                                >
+                                  Quiz / Learn
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -2540,105 +2724,196 @@ export default function DysAIDashboard() {
                     </div>
                   </div>
 
-                  {/* Interactive Practice Quiz */}
-                  {tutorLesson.quiz && (
-                    <div
-                      className={`rounded-xl border p-4 space-y-3 ${
-                        isPaper
-                          ? "border-[#E2DFD5] bg-[#FAF9F5]"
-                          : "border-white/10 bg-white/[0.03]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold flex items-center gap-1.5">
-                          <Award className="w-4 h-4 text-[#EA580C]" />
-                          Quick Lecturer-Style Practice Check
-                        </span>
-                        {selectedQuizOption !== null &&
-                          selectedQuizOption ===
-                            tutorLesson.quiz.correctIndex &&
-                          activeTutorTopic.confidence !== "solid" && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateTopicConfidence(
-                                  activeTutorTopic.id,
-                                  activeTutorTopic.confidence === "weak"
-                                    ? "review"
-                                    : "solid"
-                                )
-                              }
-                              className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-semibold cursor-pointer"
-                            >
-                              Upgrade Mastery →{" "}
-                              {activeTutorTopic.confidence === "weak"
-                                ? "Review"
-                                : "Solid"}
-                            </button>
-                          )}
-                      </div>
+                  {/* Multi-Question Official Syllabus Practice Quiz */}
+                  {(() => {
+                    const quizList: TutorQuiz[] =
+                      tutorLesson.quizQuestions &&
+                      tutorLesson.quizQuestions.length > 0
+                        ? tutorLesson.quizQuestions
+                        : tutorLesson.quiz
+                          ? [tutorLesson.quiz]
+                          : [];
 
-                      <p className="font-medium leading-relaxed">
-                        {tutorLesson.quiz.question}
-                      </p>
+                    if (quizList.length === 0) return null;
 
-                      <div className="space-y-1.5">
-                        {tutorLesson.quiz.options.map((opt, idx) => {
-                          const isSelected = selectedQuizOption === idx;
-                          const isCorrect =
-                            idx === tutorLesson.quiz.correctIndex;
-                          const answered = selectedQuizOption !== null;
+                    const answeredCount =
+                      Object.keys(selectedQuizAnswers).length;
+                    const correctCount = quizList.reduce(
+                      (acc, q, idx) =>
+                        selectedQuizAnswers[idx] === q.correctIndex
+                          ? acc + 1
+                          : acc,
+                      0
+                    );
+                    const isTrackedTopic = studyTopics.some(
+                      (st) => st.id === activeTutorTopic.id
+                    );
 
-                          let btnStyle = isPaper
-                            ? "border-[#DCD9CE] bg-white hover:bg-[#EFECE4]"
-                            : "border-white/10 bg-black/30 hover:bg-white/[0.06]";
-                          if (answered && isCorrect) {
-                            btnStyle =
-                              "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-semibold";
-                          } else if (answered && isSelected && !isCorrect) {
-                            btnStyle =
-                              "border-rose-500 bg-rose-500/15 text-rose-600 dark:text-rose-300";
-                          }
-
-                          return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => setSelectedQuizOption(idx)}
-                              className={`w-full text-left rounded-lg border px-3 py-2 transition cursor-pointer ${btnStyle}`}
-                            >
-                              <span className="font-mono-code mr-2 opacity-60">
-                                {String.fromCharCode(65 + idx)}.
+                    return (
+                      <div
+                        className={`rounded-xl border p-4 space-y-4 ${
+                          isPaper
+                            ? "border-[#E2DFD5] bg-[#FAF9F5]"
+                            : "border-white/10 bg-white/[0.03]"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Award className="w-4 h-4 text-[#EA580C]" />
+                            <span className="font-semibold">
+                              Babcock Syllabus Quiz ({quizList.length} Questions)
+                            </span>
+                            {answeredCount > 0 && (
+                              <span className="font-mono-code text-[11px] px-2 py-0.5 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-semibold">
+                                Score: {correctCount} / {quizList.length}
                               </span>
-                              {opt}
-                            </button>
-                          );
-                        })}
-                      </div>
+                            )}
+                          </div>
 
-                      {selectedQuizOption !== null && (
-                        <div
-                          className={`rounded-lg p-3 border text-[11px] leading-relaxed ${
-                            selectedQuizOption === tutorLesson.quiz.correctIndex
-                              ? "border-emerald-500/30 bg-emerald-500/10"
-                              : "border-amber-500/30 bg-amber-500/10"
-                          }`}
-                        >
-                          <p className="font-semibold mb-1">
-                            {selectedQuizOption ===
-                            tutorLesson.quiz.correctIndex
-                              ? "✓ Spot on!"
-                              : `Not quite — Option ${String.fromCharCode(
-                                  65 + tutorLesson.quiz.correctIndex
-                                )} is correct.`}
-                          </p>
-                          <p className="opacity-90">
-                            {tutorLesson.quiz.workedSolution}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            {isTrackedTopic &&
+                              answeredCount === quizList.length &&
+                              correctCount >= Math.ceil(quizList.length * 0.6) &&
+                              activeTutorTopic.confidence !== "solid" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateTopicConfidence(
+                                      activeTutorTopic.id,
+                                      activeTutorTopic.confidence === "weak"
+                                        ? "review"
+                                        : "solid"
+                                    )
+                                  }
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-semibold cursor-pointer"
+                                >
+                                  Upgrade Mastery →{" "}
+                                  {activeTutorTopic.confidence === "weak"
+                                    ? "Review"
+                                    : "Solid"}
+                                </button>
+                              )}
+
+                            <button
+                              type="button"
+                              onClick={generateFreshSyllabusQuiz}
+                              disabled={quizRefreshing}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer disabled:opacity-50 ${
+                                isPaper
+                                  ? "border-[#DCD9CE] bg-white hover:bg-[#EFECE4]"
+                                  : "border-white/10 bg-white/[0.05] hover:bg-white/[0.1]"
+                              }`}
+                            >
+                              <RefreshCw
+                                className={`w-3 h-3 ${
+                                  quizRefreshing ? "animate-spin" : ""
+                                }`}
+                              />
+                              {quizRefreshing
+                                ? "Generating..."
+                                : "New Syllabus Quiz"}
+                            </button>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
+
+                        <div className="space-y-4">
+                          {quizList.map((qItem, qIdx) => {
+                            const picked = selectedQuizAnswers[qIdx];
+                            const hasAnswered = picked !== undefined;
+
+                            return (
+                              <div
+                                key={qIdx}
+                                className={`rounded-xl border p-3.5 space-y-2.5 ${
+                                  isPaper
+                                    ? "border-[#E6E3D8] bg-white"
+                                    : "border-white/10 bg-black/25"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-mono-code text-[10px] font-semibold text-[#EA580C]">
+                                    Question {qIdx + 1} of {quizList.length}
+                                  </span>
+                                  {qItem.syllabusModule && (
+                                    <span className="text-[10px] opacity-60 truncate max-w-[280px]">
+                                      {qItem.syllabusModule}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="font-medium leading-relaxed">
+                                  {qItem.question}
+                                </p>
+
+                                <div className="space-y-1.5">
+                                  {qItem.options.map((opt, optIdx) => {
+                                    const isSelected = picked === optIdx;
+                                    const isCorrect =
+                                      optIdx === qItem.correctIndex;
+
+                                    let btnStyle = isPaper
+                                      ? "border-[#DCD9CE] bg-[#FAF9F5] hover:bg-[#EFECE4]"
+                                      : "border-white/10 bg-white/[0.03] hover:bg-white/[0.07]";
+                                    if (hasAnswered && isCorrect) {
+                                      btnStyle =
+                                        "border-emerald-500 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 font-semibold";
+                                    } else if (
+                                      hasAnswered &&
+                                      isSelected &&
+                                      !isCorrect
+                                    ) {
+                                      btnStyle =
+                                        "border-rose-500 bg-rose-500/15 text-rose-600 dark:text-rose-300";
+                                    }
+
+                                    return (
+                                      <button
+                                        key={optIdx}
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedQuizAnswers((prev) => ({
+                                            ...prev,
+                                            [qIdx]: optIdx,
+                                          }))
+                                        }
+                                        className={`w-full text-left rounded-lg border px-3 py-2 transition cursor-pointer ${btnStyle}`}
+                                      >
+                                        <span className="font-mono-code mr-2 opacity-60">
+                                          {String.fromCharCode(65 + optIdx)}.
+                                        </span>
+                                        {opt}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+
+                                {hasAnswered && (
+                                  <div
+                                    className={`rounded-lg p-3 border text-[11px] leading-relaxed ${
+                                      picked === qItem.correctIndex
+                                        ? "border-emerald-500/30 bg-emerald-500/10"
+                                        : "border-amber-500/30 bg-amber-500/10"
+                                    }`}
+                                  >
+                                    <p className="font-semibold mb-1">
+                                      {picked === qItem.correctIndex
+                                        ? "✓ Spot on!"
+                                        : `Not quite — Option ${String.fromCharCode(
+                                            65 + qItem.correctIndex
+                                          )} is correct.`}
+                                    </p>
+                                    <p className="opacity-90">
+                                      {qItem.workedSolution}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Follow-up Chat Thread */}
                   {tutorChat.length > 0 && (
