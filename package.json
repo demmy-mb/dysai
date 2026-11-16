@@ -1,0 +1,14 @@
+{
+  "name": "dysai",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=@dysai/backend run dev",
+    "dev:web": "npm --workspace=@dysai/web run dev",
+    "codegen": "npm --workspace=@dysai/backend run codegen"
+  }
+}

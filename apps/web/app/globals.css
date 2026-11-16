@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.font-mono-code {
+  font-family: var(--font-mono), monospace;
+}
+
+.font-serif-display {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 160, 0.2);
+  border-radius: 9999px;
+}
